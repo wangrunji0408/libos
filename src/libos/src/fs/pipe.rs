@@ -3,7 +3,7 @@ use util::ring_buf::*;
 
 // TODO: Use Waiter and WaitQueue infrastructure to sleep when blocking
 
-pub const PIPE_BUF_SIZE: usize = 2 * 1024 * 1024;
+pub const PIPE_BUF_SIZE: usize = 16 * 0x1000; // Linux default 16 pages
 
 #[derive(Debug)]
 pub struct Pipe {

@@ -19,11 +19,8 @@ impl RingBuf {
         let reader = RingBufReader {
             inner: inner.clone(),
         };
-        let writer = RingBufWriter { inner: inner };
-        RingBuf {
-            reader: reader,
-            writer: writer,
-        }
+        let writer = RingBufWriter { inner };
+        RingBuf { reader, writer }
     }
 }
 
@@ -43,7 +40,6 @@ struct RingBufInner {
     capacity: usize,
     head: AtomicUsize,  // write to head
     tail: AtomicUsize,  // read from tail
-    closed: AtomicBool, // if reader has been dropped
 }
 
 const RING_BUF_ALIGN: usize = 16;
@@ -58,10 +54,9 @@ impl RingBufInner {
                 assert!(buf_ptr != ptr::null_mut());
                 buf_ptr
             },
-            capacity: capacity,
+            capacity,
             head: AtomicUsize::new(0),
             tail: AtomicUsize::new(0),
-            closed: AtomicBool::new(false),
         }
     }
 
@@ -83,14 +78,6 @@ impl RingBufInner {
 
     fn set_tail(&self, new_tail: usize) {
         self.tail.store(new_tail, Ordering::SeqCst)
-    }
-
-    fn is_closed(&self) -> bool {
-        self.closed.load(Ordering::SeqCst)
-    }
-
-    fn close(&self) {
-        self.closed.store(true, Ordering::SeqCst);
     }
 
     unsafe fn read_at(&self, pos: usize, dst_buf: &mut [u8]) {
@@ -171,16 +158,9 @@ impl RingBufReader {
     }
 }
 
-impl Drop for RingBufReader {
-    fn drop(&mut self) {
-        // So the writer knows when a reader is finished
-        self.inner.close();
-    }
-}
-
 impl RingBufWriter {
     pub fn write(&self, buf: &[u8]) -> Result<usize, Error> {
-        if self.inner.is_closed() {
+        if self.reader_closed() {
             return errno!(EPIPE, "Reader has been closed");
         }
 
@@ -192,7 +172,7 @@ impl RingBufWriter {
 
             let write_nbytes = {
                 let may_write_nbytes = if tail <= head {
-                    self.inner.capacity - head
+                    (self.inner.capacity + tail - 1 - head).min(self.inner.capacity - head)
                 } else {
                     tail - head - 1
                 };
@@ -226,5 +206,9 @@ impl RingBufWriter {
             tail - head - 1
         };
         may_write_nbytes != 0
+    }
+
+    fn reader_closed(&self) -> bool {
+        Arc::strong_count(&self.inner) < 2
     }
 }
