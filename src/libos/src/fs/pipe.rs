@@ -105,9 +105,6 @@ impl File for PipeReader {
     }
 }
 
-unsafe impl Send for PipeReader {}
-unsafe impl Sync for PipeReader {}
-
 #[derive(Debug)]
 pub struct PipeWriter {
     inner: SgxMutex<RingBufWriter>,
@@ -186,6 +183,3 @@ impl File for PipeWriter {
         self
     }
 }
-
-unsafe impl Send for PipeWriter {}
-unsafe impl Sync for PipeWriter {}

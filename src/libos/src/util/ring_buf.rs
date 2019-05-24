@@ -1,11 +1,14 @@
 use alloc::alloc::{alloc, dealloc, Layout};
-
+use std::cell::UnsafeCell;
 use std::cmp::{max, min};
 use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use super::*;
+
+unsafe impl Send for RingBufReader {}
+unsafe impl Send for RingBufWriter {}
 
 #[derive(Debug)]
 pub struct RingBuf {
@@ -36,7 +39,8 @@ pub struct RingBufWriter {
 
 #[derive(Debug)]
 struct RingBufInner {
-    buf: *mut u8,
+    // use UnsafeCell to avoid buffer R/W being optimized out
+    buf: UnsafeCell<*mut u8>,
     capacity: usize,
     head: AtomicUsize,  // write to head
     tail: AtomicUsize,  // read from tail
@@ -52,7 +56,7 @@ impl RingBufInner {
                 let buf_layout = Layout::from_size_align_unchecked(capacity, RING_BUF_ALIGN);
                 let buf_ptr = alloc(buf_layout);
                 assert!(buf_ptr != ptr::null_mut());
-                buf_ptr
+                UnsafeCell::new(buf_ptr)
             },
             capacity,
             head: AtomicUsize::new(0),
@@ -83,7 +87,7 @@ impl RingBufInner {
     unsafe fn read_at(&self, pos: usize, dst_buf: &mut [u8]) {
         let dst_ptr = dst_buf.as_mut_ptr();
         let dst_len = dst_buf.len();
-        let src_ptr = self.buf.offset(pos as isize);
+        let src_ptr = self.buffer_ptr(pos);
         unsafe {
             src_ptr.copy_to_nonoverlapping(dst_ptr, dst_len);
         }
@@ -92,10 +96,14 @@ impl RingBufInner {
     unsafe fn write_at(&self, pos: usize, src_buf: &[u8]) {
         let src_ptr = src_buf.as_ptr();
         let src_len = src_buf.len();
-        let dst_ptr = self.buf.offset(pos as isize);
+        let dst_ptr = self.buffer_ptr(pos);
         unsafe {
             dst_ptr.copy_from_nonoverlapping(src_ptr, src_len);
         }
+    }
+
+    unsafe fn buffer_ptr(&self, offset: usize) -> *mut u8 {
+        (*self.buf.get()).add(offset)
     }
 }
 
@@ -103,7 +111,7 @@ impl Drop for RingBufInner {
     fn drop(&mut self) {
         unsafe {
             let buf_layout = Layout::from_size_align_unchecked(self.capacity, RING_BUF_ALIGN);
-            dealloc(self.buf, buf_layout);
+            dealloc(self.buffer_ptr(0), buf_layout);
         }
     }
 }
