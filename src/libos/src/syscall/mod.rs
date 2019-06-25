@@ -12,7 +12,6 @@ use fs::*;
 use misc::{resource_t, rlimit_t, utsname_t};
 use prelude::*;
 use process::{pid_t, ChildProcessFilter, CloneFlags, FileAction, FutexFlags, FutexOp};
-use std::ffi::{CStr, CString};
 use time::timeval_t;
 use util::mem_util::from_user::*;
 use vm::{VMAreaFlags, VMResizeOptions};
@@ -355,9 +354,7 @@ fn clone_file_actions_safely(fdop_ptr: *const FdOp) -> Result<Vec<FileAction>, E
             FDOP_CLOSE => FileAction::Close(fdop.fd),
             FDOP_DUP2 => FileAction::Dup2(fdop.srcfd, fdop.fd),
             FDOP_OPEN => FileAction::Open {
-                path: clone_cstring_safely(fdop.path)?
-                    .to_string_lossy()
-                    .into_owned(),
+                path: clone_cstring_safely(fdop.path)?,
                 mode: fdop.mode,
                 oflag: fdop.oflag,
                 fd: fdop.fd,
@@ -382,7 +379,7 @@ fn do_spawn(
     fdop_list: *const FdOp,
 ) -> Result<isize, Error> {
     check_mut_ptr(child_pid_ptr)?;
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     let argv = clone_cstrings_safely(argv)?;
     let envp = clone_cstrings_safely(envp)?;
     let file_actions = clone_file_actions_safely(fdop_list)?;
@@ -456,7 +453,7 @@ pub fn do_futex(futex_addr: *const i32, futex_op: u32, futex_val: i32) -> Result
 }
 
 fn do_open(path: *const i8, flags: u32, mode: u32) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     let fd = fs::do_open(&path, flags, mode)?;
     Ok(fd as isize)
 }
@@ -553,7 +550,7 @@ fn do_pwrite(fd: FileDesc, buf: *const u8, size: usize, offset: usize) -> Result
 }
 
 fn do_stat(path: *const i8, stat_buf: *mut fs::Stat) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     check_mut_ptr(stat_buf)?;
 
     let stat = fs::do_stat(&path)?;
@@ -574,7 +571,7 @@ fn do_fstat(fd: FileDesc, stat_buf: *mut fs::Stat) -> Result<isize, Error> {
 }
 
 fn do_lstat(path: *const i8, stat_buf: *mut fs::Stat) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     check_mut_ptr(stat_buf)?;
 
     let stat = fs::do_lstat(&path)?;
@@ -621,7 +618,7 @@ fn do_fdatasync(fd: FileDesc) -> Result<isize, Error> {
 }
 
 fn do_truncate(path: *const i8, len: usize) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     fs::do_truncate(&path, len)?;
     Ok(0)
 }
@@ -838,53 +835,45 @@ fn do_getcwd(buf: *mut u8, size: usize) -> Result<isize, Error> {
 }
 
 fn do_chdir(path: *const i8) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     fs::do_chdir(&path)?;
     Ok(0)
 }
 
 fn do_rename(oldpath: *const i8, newpath: *const i8) -> Result<isize, Error> {
-    let oldpath = clone_cstring_safely(oldpath)?
-        .to_string_lossy()
-        .into_owned();
-    let newpath = clone_cstring_safely(newpath)?
-        .to_string_lossy()
-        .into_owned();
+    let oldpath = clone_cstring_safely(oldpath)?;
+    let newpath = clone_cstring_safely(newpath)?;
     fs::do_rename(&oldpath, &newpath)?;
     Ok(0)
 }
 
 fn do_mkdir(path: *const i8, mode: usize) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     fs::do_mkdir(&path, mode)?;
     Ok(0)
 }
 
 fn do_rmdir(path: *const i8) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     fs::do_rmdir(&path)?;
     Ok(0)
 }
 
 fn do_link(oldpath: *const i8, newpath: *const i8) -> Result<isize, Error> {
-    let oldpath = clone_cstring_safely(oldpath)?
-        .to_string_lossy()
-        .into_owned();
-    let newpath = clone_cstring_safely(newpath)?
-        .to_string_lossy()
-        .into_owned();
+    let oldpath = clone_cstring_safely(oldpath)?;
+    let newpath = clone_cstring_safely(newpath)?;
     fs::do_link(&oldpath, &newpath)?;
     Ok(0)
 }
 
 fn do_unlink(path: *const i8) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     fs::do_unlink(&path)?;
     Ok(0)
 }
 
 fn do_readlink(path: *const i8, buf: *mut u8, size: usize) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     let buf = {
         check_array(buf, size)?;
         unsafe { core::slice::from_raw_parts_mut(buf, size) }
@@ -991,9 +980,7 @@ fn do_connect(
     } else if let Ok(unix_socket) = file_ref.as_unix_socket() {
         let addr = addr as *const libc::sockaddr_un;
         check_ptr(addr)?; // TODO: check addr_len
-        let path = clone_cstring_safely(unsafe { (&*addr).sun_path.as_ptr() })?
-            .to_string_lossy()
-            .into_owned();
+        let path = clone_cstring_safely(unsafe { (&*addr).sun_path.as_ptr() })?;
         unix_socket.connect(path)?;
         Ok(0)
     } else {
@@ -1065,9 +1052,7 @@ fn do_bind(
     } else if let Ok(unix_socket) = file_ref.as_unix_socket() {
         let addr = addr as *const libc::sockaddr_un;
         check_ptr(addr)?; // TODO: check addr_len
-        let path = clone_cstring_safely(unsafe { (&*addr).sun_path.as_ptr() })?
-            .to_string_lossy()
-            .into_owned();
+        let path = clone_cstring_safely(unsafe { (&*addr).sun_path.as_ptr() })?;
         unix_socket.bind(path)?;
         Ok(0)
     } else {
@@ -1385,7 +1370,7 @@ fn do_prlimit(
 }
 
 fn do_access(path: *const i8, mode: u32) -> Result<isize, Error> {
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     let mode = AccessModes::from_u32(mode)?;
     fs::do_access(&path, mode).map(|_| 0)
 }
@@ -1398,7 +1383,7 @@ fn do_faccessat(dirfd: i32, path: *const i8, mode: u32, flags: u32) -> Result<is
     } else {
         return errno!(EINVAL, "invalid dirfd");
     };
-    let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
+    let path = clone_cstring_safely(path)?;
     let mode = AccessModes::from_u32(mode)?;
     let flags = AccessFlags::from_u32(flags)?;
     fs::do_faccessat(dirfd, &path, mode, flags).map(|_| 0)

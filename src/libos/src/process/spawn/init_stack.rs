@@ -1,7 +1,6 @@
 use super::*;
 
 use core::{mem, ptr};
-use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 /*
@@ -50,8 +49,8 @@ use std::os::raw::c_char;
 pub fn do_init(
     stack_top: usize,
     init_area_size: usize,
-    argv: &[CString],
-    envp: &[CString],
+    argv: &[String],
+    envp: &[String],
     auxtbl: &AuxTable,
 ) -> Result<usize, Error> {
     let stack_buf = unsafe { StackBuf::new(stack_top, init_area_size)? };
@@ -125,9 +124,9 @@ impl StackBuf {
         Ok(base_ptr as *const T)
     }
 
-    pub fn put_cstr(&self, cstr: &CStr) -> Result<*const u8, Error> {
-        let bytes = cstr.to_bytes_with_nul();
-        self.put_slice(bytes)
+    pub fn put_cstr(&self, cstr: &str) -> Result<*const u8, Error> {
+        self.put_slice(&[0u8])?;
+        self.put_slice(cstr.as_bytes())
     }
 
     pub fn get_pos(&self) -> usize {
@@ -149,21 +148,17 @@ impl StackBuf {
     }
 }
 
-fn clone_cstrings_on_stack<'a, 'b>(
-    stack: &'a StackBuf,
-    cstrings: &'b [CString],
-) -> Result<Vec<&'a CStr>, Error> {
+fn clone_cstrings_on_stack(stack: &StackBuf, cstrings: &[String]) -> Result<Vec<*const u8>, Error> {
     let mut cstrs_cloned = Vec::new();
     for cs in cstrings.iter().rev() {
         let cstrp_cloned = stack.put_cstr(cs)?;
-        let cstr_cloned = unsafe { CStr::from_ptr::<'a>(cstrp_cloned as *const c_char) };
-        cstrs_cloned.push(cstr_cloned);
+        cstrs_cloned.push(cstrp_cloned);
     }
     cstrs_cloned.reverse();
     Ok(cstrs_cloned)
 }
 
-fn dump_auxtbl_on_stack<'a, 'b>(stack: &'a StackBuf, auxtbl: &'b AuxTable) -> Result<(), Error> {
+fn dump_auxtbl_on_stack(stack: &StackBuf, auxtbl: &AuxTable) -> Result<(), Error> {
     // For every key-value pari, dump the value first, then the key
     stack.put(AuxKey::AT_NULL as u64);
     stack.put(AuxKey::AT_NULL as u64);
@@ -174,13 +169,10 @@ fn dump_auxtbl_on_stack<'a, 'b>(stack: &'a StackBuf, auxtbl: &'b AuxTable) -> Re
     Ok(())
 }
 
-fn dump_cstrptrs_on_stack<'a, 'b>(
-    stack: &'a StackBuf,
-    strptrs: &'b [&'a CStr],
-) -> Result<(), Error> {
+fn dump_cstrptrs_on_stack(stack: &StackBuf, strptrs: &[*const u8]) -> Result<(), Error> {
     stack.put(0 as u64); // End with a NULL pointer
     for sp in strptrs.iter().rev() {
-        stack.put(sp.as_ptr() as u64);
+        stack.put(*sp as u64);
     }
     Ok(())
 }

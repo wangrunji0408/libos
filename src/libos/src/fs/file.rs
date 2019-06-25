@@ -2,6 +2,7 @@ use super::*;
 use core::borrow::BorrowMut;
 use core::fmt;
 use std::io::SeekFrom;
+use std::sgxfs as fs_impl;
 
 pub trait File: Debug + Sync + Send + Any {
     fn read(&self, buf: &mut [u8]) -> Result<usize, Error>;

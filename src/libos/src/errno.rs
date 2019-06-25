@@ -1,8 +1,5 @@
 use core::{convert, fmt};
 use prelude::*;
-use std::error;
-
-// TODO: remove errno.h
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Error {
@@ -29,16 +26,6 @@ impl convert::From<std::io::Error> for Error {
             Errno::from_errno(info.raw_os_error().unwrap()),
             "std::io::Error",
         )
-    }
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        self.desc
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        None
     }
 }
 

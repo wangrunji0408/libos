@@ -3,7 +3,6 @@ use xmas_elf::{header, program, sections, ElfFile};
 
 use fs::{File, FileDesc, FileTable, INodeExt, OpenFlags, StdinFile, StdoutFile, ROOT_INODE};
 use misc::ResourceLimitsRef;
-use std::ffi::{CStr, CString};
 use std::path::Path;
 use std::sgxfs::SgxFile;
 use vm::{ProcessVM, VMRangeTrait};
@@ -34,8 +33,8 @@ pub enum FileAction {
 
 pub fn do_spawn<P: AsRef<Path>>(
     elf_path: &P,
-    argv: &[CString],
-    envp: &[CString],
+    argv: &[String],
+    envp: &[String],
     file_actions: &[FileAction],
     parent_ref: &ProcessRef,
 ) -> Result<u32, Error> {
@@ -144,8 +143,8 @@ fn init_files(parent_ref: &ProcessRef, file_actions: &[FileAction]) -> Result<Fi
 fn init_task(
     user_entry: usize,
     stack_top: usize,
-    argv: &[CString],
-    envp: &[CString],
+    argv: &[String],
+    envp: &[String],
     auxtbl: &AuxTable,
 ) -> Result<Task, Error> {
     let user_stack = init_stack::do_init(stack_top, 4096, argv, envp, auxtbl)?;

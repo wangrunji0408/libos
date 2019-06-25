@@ -2,7 +2,6 @@ use prelude::*;
 use process;
 use process::Process;
 use rcore_fs::vfs::{FileType, FsError, INode, Metadata, Timespec};
-use std::sgxfs as fs_impl;
 
 use super::*;
 

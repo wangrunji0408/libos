@@ -1,6 +1,5 @@
 use super::*;
 use core::ptr;
-use std::ffi::{CStr, CString};
 
 /// Memory utilities that deals with primitive types passed from user process
 /// running inside enclave
@@ -28,18 +27,18 @@ pub mod from_user {
     }
 
     /// Clone a C-string from the user process safely
-    pub fn clone_cstring_safely(out_ptr: *const c_char) -> Result<CString, Error> {
+    pub fn clone_cstring_safely(out_ptr: *const c_char) -> Result<String, Error> {
         check_ptr(out_ptr)?;
-        // TODO: using from_ptr directly is not safe
-        let cstr = unsafe { CStr::from_ptr(out_ptr) };
-        let cstring = CString::from(cstr);
+        // TODO: using from_cstr directly is not safe
+        let cstr = unsafe { from_cstr(out_ptr as *const u8) };
+        let cstring = String::from(cstr);
         Ok(cstring)
     }
 
     /// Clone a C-string array (const char*[]) from the user process safely
     ///
     /// This array must be ended with a NULL pointer.
-    pub fn clone_cstrings_safely(user_ptr: *const *const c_char) -> Result<Vec<CString>, Error> {
+    pub fn clone_cstrings_safely(user_ptr: *const *const c_char) -> Result<Vec<String>, Error> {
         let mut cstrings = Vec::new();
         if user_ptr == ptr::null() {
             return Ok(cstrings);
@@ -80,18 +79,18 @@ pub mod from_untrusted {
     }
 
     /// Clone a C-string from outside the enclave
-    pub fn clone_cstring_safely(out_ptr: *const c_char) -> Result<CString, Error> {
+    pub fn clone_cstring_safely(out_ptr: *const c_char) -> Result<String, Error> {
         check_ptr(out_ptr)?;
-        // TODO: using from_ptr directly is not safe
-        let cstr = unsafe { CStr::from_ptr(out_ptr) };
-        let cstring = CString::from(cstr);
+        // TODO: using from_cstr directly is not safe
+        let cstr = unsafe { from_cstr(out_ptr as *const u8) };
+        let cstring = String::from(cstr);
         Ok(cstring)
     }
 
     /// Clone a C-string array (const char*[]) from outside the enclave
     ///
     /// This array must be ended with a NULL pointer.
-    pub fn clone_cstrings_safely(out_ptr: *const *const c_char) -> Result<Vec<CString>, Error> {
+    pub fn clone_cstrings_safely(out_ptr: *const *const c_char) -> Result<Vec<String>, Error> {
         let mut cstrings = Vec::new();
         if out_ptr == ptr::null() {
             return Ok(cstrings);
@@ -115,4 +114,11 @@ pub mod from_untrusted {
         }
         Ok(cstrings)
     }
+}
+
+/// Convert C string to Rust string
+pub unsafe fn from_cstr(s: *const u8) -> &'static str {
+    use core::{slice, str};
+    let len = (0usize..).find(|&i| *s.add(i) == 0).unwrap();
+    str::from_utf8(slice::from_raw_parts(s, len)).unwrap()
 }

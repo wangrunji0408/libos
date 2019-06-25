@@ -29,7 +29,6 @@ extern crate rcore_fs_sefs;
 use sgx_trts::libc;
 use sgx_types::*;
 use std::backtrace::{self, PrintFormat};
-use std::ffi::CStr; // a borrowed C string
 
 #[macro_use]
 mod prelude;

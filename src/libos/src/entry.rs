@@ -1,5 +1,4 @@
 use super::*;
-use std::ffi::{CStr, CString, OsString};
 use std::path::Path;
 use util::mem_util::from_untrusted::*;
 
@@ -46,11 +45,8 @@ const EXIT_STATUS_INTERNAL_ERROR: i32 = 127;
 fn parse_arguments(
     path_buf: *const c_char,
     argv: *const *const c_char,
-) -> Result<(String, Vec<CString>), Error> {
-    let path_string = {
-        let path_cstring = clone_cstring_safely(path_buf)?;
-        path_cstring.to_string_lossy().into_owned()
-    };
+) -> Result<(String, Vec<String>), Error> {
+    let path_string = clone_cstring_safely(path_buf)?;
     let program_cstring = {
         let program_osstr = Path::new(&path_string)
             .file_name()
@@ -58,7 +54,7 @@ fn parse_arguments(
         let program_str = program_osstr
             .to_str()
             .ok_or_else(|| Error::new(Errno::EINVAL, "Invalid path"))?;
-        CString::new(program_str).or_else(|_| errno!(EINVAL, "Invalid path"))?
+        String::from(program_str)
     };
 
     let mut args = clone_cstrings_safely(argv)?;
@@ -67,7 +63,7 @@ fn parse_arguments(
 }
 
 // TODO: make sure do_boot can only be called once
-fn do_boot(path_str: &str, argv: &Vec<CString>) -> Result<(), Error> {
+fn do_boot(path_str: &str, argv: &Vec<String>) -> Result<(), Error> {
     //    info!("boot: path: {:?}, argv: {:?}", path_str, argv);
     util::mpx_util::mpx_enable()?;
 

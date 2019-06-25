@@ -1,5 +1,4 @@
 use super::*;
-use std::ffi::{CStr, CString};
 
 /// A sample of `struct utsname`
 /// ```
@@ -24,27 +23,24 @@ pub struct utsname_t {
 }
 
 pub fn do_uname(name: &mut utsname_t) -> Result<(), Error> {
-    copy_from_cstr_to_u8_array(&SYSNAME, &mut name.sysname);
-    copy_from_cstr_to_u8_array(&NODENAME, &mut name.nodename);
-    copy_from_cstr_to_u8_array(&RELEASE, &mut name.release);
-    copy_from_cstr_to_u8_array(&VERSION, &mut name.version);
-    copy_from_cstr_to_u8_array(&MACHINE, &mut name.machine);
-    copy_from_cstr_to_u8_array(&DOMAINNAME, &mut name.domainname);
+    copy_from_cstr_to_u8_array(SYSNAME, &mut name.sysname);
+    copy_from_cstr_to_u8_array(NODENAME, &mut name.nodename);
+    copy_from_cstr_to_u8_array(RELEASE, &mut name.release);
+    copy_from_cstr_to_u8_array(VERSION, &mut name.version);
+    copy_from_cstr_to_u8_array(MACHINE, &mut name.machine);
+    copy_from_cstr_to_u8_array(DOMAINNAME, &mut name.domainname);
     Ok(())
 }
 
-lazy_static! {
-    static ref SYSNAME: CString = CString::new("Occlum").unwrap();
-    static ref NODENAME: CString = CString::new("occlum-node").unwrap();
-    static ref RELEASE: CString = CString::new("0.1").unwrap();
-    static ref VERSION: CString = CString::new("0.1").unwrap();
-    static ref MACHINE: CString = CString::new("x86-64").unwrap();
-    static ref DOMAINNAME: CString = CString::new("").unwrap();
-}
+const SYSNAME: &str = "Occlum";
+const NODENAME: &str = "occlum-node";
+const RELEASE: &str = "0.1";
+const VERSION: &str = "0.1";
+const MACHINE: &str = "x86-64";
+const DOMAINNAME: &str = "";
 
-fn copy_from_cstr_to_u8_array(src: &CStr, dst: &mut [u8]) {
-    let src: &[u8] = src.to_bytes_with_nul();
-    let len = min(dst.len() - 1, src.len());
-    dst[..len].copy_from_slice(&src[..len]);
+fn copy_from_cstr_to_u8_array(src: &str, dst: &mut [u8]) {
+    let len = min(dst.len() - 1, src.as_bytes().len());
+    dst[..len].copy_from_slice(&src.as_bytes()[..len]);
     dst[len] = 0;
 }
