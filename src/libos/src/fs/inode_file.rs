@@ -187,6 +187,10 @@ impl From<FsError> for Error {
             FsError::DirNotEmpty => ENOTEMPTY,
             FsError::WrongFs => EINVAL,
             FsError::DeviceError => EIO,
+            FsError::IOCTLError => EINVAL,
+            FsError::NoDevice => ENXIO,
+            FsError::Again => EAGAIN,
+            FsError::SymLoop => ELOOP,
         };
         Error::new(errno, "")
     }
