@@ -1,6 +1,5 @@
 use super::file::{File, FileRef};
 use super::*;
-use std;
 
 pub type FileDesc = u32;
 
@@ -80,7 +79,7 @@ impl FileTable {
         if fd as usize >= table.len() {
             table.resize(fd as usize + 1, None);
         }
-        std::mem::swap(&mut table_entry, &mut table[fd as usize]);
+        core::mem::swap(&mut table_entry, &mut table[fd as usize]);
         if table_entry.is_none() {
             self.num_fds += 1;
         }
@@ -122,7 +121,7 @@ impl FileTable {
 
         let mut del_table_entry = None;
         let table = &mut self.table;
-        std::mem::swap(&mut del_table_entry, &mut table[fd as usize]);
+        core::mem::swap(&mut del_table_entry, &mut table[fd as usize]);
         match del_table_entry {
             Some(del_table_entry) => {
                 self.num_fds -= 1;

@@ -7,6 +7,7 @@
 #![feature(allocator_api)]
 #![feature(range_contains)]
 #![feature(core_intrinsics)]
+#![feature(core_panic_info)]
 
 #[macro_use]
 extern crate alloc;
@@ -29,7 +30,6 @@ use sgx_trts::libc;
 use sgx_types::*;
 use std::backtrace::{self, PrintFormat};
 use std::ffi::CStr; // a borrowed C string
-use std::panic;
 
 #[macro_use]
 mod prelude;

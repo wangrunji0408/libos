@@ -1,28 +1,26 @@
 pub use sgx_trts::libc;
 pub use sgx_trts::libc::off_t;
 pub use sgx_types::*;
-use std;
 
 //pub use {elf_helper, errno, file, file_table, fs, mm, process, syscall, vma, };
 
-pub use std::cell::{Cell, RefCell};
-pub use std::marker::{Send, Sync};
-pub use std::result::Result;
+pub use alloc::boxed::Box;
+pub use alloc::collections::{BTreeMap, VecDeque};
+pub use alloc::prelude::ToOwned;
+pub use alloc::rc::Rc;
+pub use alloc::string::String;
+pub use alloc::vec::Vec;
+pub use core::cell::{Cell, RefCell};
+pub use core::cmp::{max, min};
+pub use core::cmp::{Ordering, PartialOrd};
+pub use core::fmt::{Debug, Display};
+pub use core::iter::Iterator;
+pub use core::marker::{Send, Sync};
+pub use core::result::Result;
+pub use std::io::{Read, Seek, SeekFrom, Write};
 pub use std::sync::{
     Arc, SgxMutex, SgxMutexGuard, SgxRwLock, SgxRwLockReadGuard, SgxRwLockWriteGuard,
 };
-//pub use std::borrow::BorrowMut;
-pub use std::borrow::ToOwned;
-pub use std::boxed::Box;
-pub use std::cmp::{max, min};
-pub use std::cmp::{Ordering, PartialOrd};
-pub use std::collections::{HashMap, VecDeque};
-pub use std::fmt::{Debug, Display};
-pub use std::io::{Read, Seek, SeekFrom, Write};
-pub use std::iter::Iterator;
-pub use std::rc::Rc;
-pub use std::string::String;
-pub use std::vec::Vec;
 
 pub use errno::Errno;
 pub use errno::Errno::*;

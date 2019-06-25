@@ -1,6 +1,6 @@
 use self::segment::*;
 use super::*;
-use std::ptr;
+use core::ptr;
 use xmas_elf::{header, program, sections, ElfFile};
 
 pub const DEFAULT_STACK_SIZE: usize = 1 * 1024 * 1024;

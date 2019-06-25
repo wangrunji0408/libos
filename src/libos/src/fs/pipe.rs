@@ -1,4 +1,5 @@
 use super::*;
+use core::marker::{Send, Sync};
 use util::ring_buf::*;
 
 // TODO: Use Waiter and WaitQueue infrastructure to sleep when blocking

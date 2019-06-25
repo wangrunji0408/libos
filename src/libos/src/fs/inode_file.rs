@@ -1,6 +1,6 @@
+use core::fmt;
 use rcore_fs::vfs::{FileSystem, FsError, INode};
 use rcore_fs_sefs::SEFS;
-use std::fmt;
 
 use super::sgx_impl::SgxStorage;
 use super::*;

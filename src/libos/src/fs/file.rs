@@ -1,7 +1,6 @@
 use super::*;
-use std;
-use std::borrow::BorrowMut;
-use std::fmt;
+use core::borrow::BorrowMut;
+use core::fmt;
 use std::io::SeekFrom;
 
 pub trait File: Debug + Sync + Send + Any {

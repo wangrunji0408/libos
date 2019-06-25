@@ -1,9 +1,9 @@
 use super::*;
-use std::sync::atomic::{AtomicU32, Ordering};
+use core::sync::atomic::{AtomicU32, Ordering};
 
 lazy_static! {
-    static ref PROCESS_TABLE: SgxMutex<HashMap<pid_t, ProcessRef>> =
-        { SgxMutex::new(HashMap::new()) };
+    static ref PROCESS_TABLE: SgxMutex<BTreeMap<pid_t, ProcessRef>> =
+        { SgxMutex::new(BTreeMap::new()) };
 }
 
 pub fn put(pid: pid_t, process: ProcessRef) {

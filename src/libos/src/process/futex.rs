@@ -1,5 +1,5 @@
 use super::*;
-use std::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::{AtomicBool, Ordering};
 
 /// `FutexOp`, `FutexFlags`, and `futex_op_and_flags_from_u32` are helper types and
 /// functions for handling the versatile commands and arguments of futex system
@@ -88,7 +88,7 @@ lazy_static! {
     static ref FUTEX_TABLE: SgxMutex<FutexTable> = { SgxMutex::new(FutexTable::new()) };
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 struct FutexKey(usize);
 
 impl FutexKey {
@@ -149,13 +149,13 @@ impl FutexItem {
 type FutexItemRef = Arc<FutexItem>;
 
 struct FutexTable {
-    table: HashMap<FutexKey, FutexItemRef>,
+    table: BTreeMap<FutexKey, FutexItemRef>,
 }
 
 impl FutexTable {
     pub fn new() -> FutexTable {
         FutexTable {
-            table: HashMap::new(),
+            table: BTreeMap::new(),
         }
     }
 

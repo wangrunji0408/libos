@@ -1,7 +1,7 @@
+use core::fmt;
 use fs::FileDesc;
 use prelude::*;
 use process::{get_current, Process, ProcessRef};
-use std::fmt;
 
 #[macro_use]
 mod vm_range;

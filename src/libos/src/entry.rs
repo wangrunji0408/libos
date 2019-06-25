@@ -14,7 +14,7 @@ pub extern "C" fn libos_boot(path_buf: *const c_char, argv: *const *const c_char
     };
 
     let _ = backtrace::enable_backtrace("libocclum.signed.so", PrintFormat::Short);
-    panic::catch_unwind(|| {
+    std::panic::catch_unwind(|| {
         backtrace::__rust_begin_short_backtrace(|| match do_boot(&path, &args) {
             Ok(()) => 0,
             Err(err) => EXIT_STATUS_INTERNAL_ERROR,
@@ -26,7 +26,7 @@ pub extern "C" fn libos_boot(path_buf: *const c_char, argv: *const *const c_char
 #[no_mangle]
 pub extern "C" fn libos_run() -> i32 {
     let _ = backtrace::enable_backtrace("libocclum.signed.so", PrintFormat::Short);
-    panic::catch_unwind(|| {
+    std::panic::catch_unwind(|| {
         backtrace::__rust_begin_short_backtrace(|| match do_run() {
             Ok(exit_status) => exit_status,
             Err(err) => EXIT_STATUS_INTERNAL_ERROR,
@@ -71,7 +71,7 @@ fn do_boot(path_str: &str, argv: &Vec<CString>) -> Result<(), Error> {
     //    info!("boot: path: {:?}, argv: {:?}", path_str, argv);
     util::mpx_util::mpx_enable()?;
 
-    let envp = std::vec::Vec::new();
+    let envp = alloc::vec::Vec::new();
     let file_actions = Vec::new();
     let parent = &process::IDLE_PROCESS;
     process::do_spawn(&path_str, argv, &envp, &file_actions, parent)?;

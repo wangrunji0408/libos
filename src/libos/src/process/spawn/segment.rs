@@ -1,5 +1,5 @@
 use super::*;
-use std::slice;
+use core::slice;
 use xmas_elf::program::ProgramHeader;
 
 #[derive(Debug, Default)]

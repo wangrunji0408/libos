@@ -1,8 +1,8 @@
 use prelude::*;
+use process;
 use process::Process;
 use rcore_fs::vfs::{FileType, FsError, INode, Metadata, Timespec};
 use std::sgxfs as fs_impl;
-use {process, std};
 
 use super::*;
 
@@ -16,8 +16,8 @@ use self::null::NullFile;
 pub use self::pipe::Pipe;
 pub use self::socket_file::{AsSocket, SocketFile};
 pub use self::unix_socket::{AsUnixSocket, UnixSocketFile};
-use std::any::Any;
-use std::mem::uninitialized;
+use core::any::Any;
+use core::mem::uninitialized;
 
 mod access;
 mod file;

@@ -1,8 +1,8 @@
 use super::*;
+use alloc::collections::btree_map::BTreeMap;
 use alloc::prelude::ToString;
-use std::collections::btree_map::BTreeMap;
-use std::fmt;
-use std::sync::atomic::spin_loop_hint;
+use core::fmt;
+use core::sync::atomic::spin_loop_hint;
 use std::sync::SgxMutex as Mutex;
 use util::ring_buf::{RingBuf, RingBufReader, RingBufWriter};
 

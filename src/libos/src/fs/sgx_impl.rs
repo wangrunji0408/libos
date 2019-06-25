@@ -1,8 +1,8 @@
+use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
 use rcore_fs::dev::TimeProvider;
 use rcore_fs::vfs::Timespec;
 use rcore_fs_sefs::dev::*;
-use std::boxed::Box;
-use std::collections::BTreeMap;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sgxfs::{remove, OpenOptions, SgxFile};

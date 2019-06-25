@@ -1,6 +1,6 @@
 use super::*;
+use core::ptr;
 use std::ffi::{CStr, CString};
-use std::ptr;
 
 /// Memory utilities that deals with primitive types passed from user process
 /// running inside enclave

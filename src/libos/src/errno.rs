@@ -1,5 +1,6 @@
+use core::{convert, fmt};
 use prelude::*;
-use std::{convert, error, fmt};
+use std::error;
 
 // TODO: remove errno.h
 

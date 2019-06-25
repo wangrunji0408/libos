@@ -1,5 +1,5 @@
 use super::*;
-use std::intrinsics::atomic_store;
+use core::intrinsics::atomic_store;
 
 // TODO: make sure Processes are released eventually
 

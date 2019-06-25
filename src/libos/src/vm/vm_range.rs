@@ -1,5 +1,5 @@
 use super::*;
-use std::fmt;
+use core::fmt;
 
 pub trait VMRangeTrait {
     fn get_start(&self) -> usize;

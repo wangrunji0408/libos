@@ -1,5 +1,5 @@
 use super::*;
-use std::any::Any;
+use core::any::Any;
 
 /// Native Linux socket
 #[derive(Debug)]

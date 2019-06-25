@@ -7,21 +7,21 @@
 //! 3. Dispatch the syscall to `do_*` (at this file)
 //! 4. Do some memory checks then call `mod::do_*` (at each module)
 
+use core::ptr;
 use fs::*;
 use misc::{resource_t, rlimit_t, utsname_t};
 use prelude::*;
 use process::{pid_t, ChildProcessFilter, CloneFlags, FileAction, FutexFlags, FutexOp};
 use std::ffi::{CStr, CString};
-use std::ptr;
 use time::timeval_t;
 use util::mem_util::from_user::*;
 use vm::{VMAreaFlags, VMResizeOptions};
-use {fs, process, std, vm};
+use {fs, process, vm};
 
 use super::*;
 
 use self::consts::*;
-use std::any::Any;
+use core::any::Any;
 
 // Use the internal syscall wrappers from sgx_tstd
 //use std::libc_fs as fs;
@@ -469,7 +469,7 @@ fn do_close(fd: FileDesc) -> Result<isize, Error> {
 fn do_read(fd: FileDesc, buf: *mut u8, size: usize) -> Result<isize, Error> {
     let safe_buf = {
         check_mut_array(buf, size)?;
-        unsafe { std::slice::from_raw_parts_mut(buf, size) }
+        unsafe { core::slice::from_raw_parts_mut(buf, size) }
     };
     let len = fs::do_read(fd, safe_buf)?;
     Ok(len as isize)
@@ -478,7 +478,7 @@ fn do_read(fd: FileDesc, buf: *mut u8, size: usize) -> Result<isize, Error> {
 fn do_write(fd: FileDesc, buf: *const u8, size: usize) -> Result<isize, Error> {
     let safe_buf = {
         check_array(buf, size)?;
-        unsafe { std::slice::from_raw_parts(buf, size) }
+        unsafe { core::slice::from_raw_parts(buf, size) }
     };
     let len = fs::do_write(fd, safe_buf)?;
     Ok(len as isize)
@@ -498,7 +498,7 @@ fn do_writev(fd: FileDesc, iov: *const iovec_t, count: i32) -> Result<isize, Err
         for iov_i in 0..count {
             let iov_ptr = unsafe { iov.offset(iov_i as isize) };
             let iov = unsafe { &*iov_ptr };
-            let buf = unsafe { std::slice::from_raw_parts(iov.base as *const u8, iov.len) };
+            let buf = unsafe { core::slice::from_raw_parts(iov.base as *const u8, iov.len) };
             bufs_vec.push(buf);
         }
         bufs_vec
@@ -523,7 +523,7 @@ fn do_readv(fd: FileDesc, iov: *mut iovec_t, count: i32) -> Result<isize, Error>
         for iov_i in 0..count {
             let iov_ptr = unsafe { iov.offset(iov_i as isize) };
             let iov = unsafe { &*iov_ptr };
-            let buf = unsafe { std::slice::from_raw_parts_mut(iov.base as *mut u8, iov.len) };
+            let buf = unsafe { core::slice::from_raw_parts_mut(iov.base as *mut u8, iov.len) };
             bufs_vec.push(buf);
         }
         bufs_vec
@@ -537,7 +537,7 @@ fn do_readv(fd: FileDesc, iov: *mut iovec_t, count: i32) -> Result<isize, Error>
 fn do_pread(fd: FileDesc, buf: *mut u8, size: usize, offset: usize) -> Result<isize, Error> {
     let safe_buf = {
         check_mut_array(buf, size)?;
-        unsafe { std::slice::from_raw_parts_mut(buf, size) }
+        unsafe { core::slice::from_raw_parts_mut(buf, size) }
     };
     let len = fs::do_pread(fd, safe_buf, offset)?;
     Ok(len as isize)
@@ -546,7 +546,7 @@ fn do_pread(fd: FileDesc, buf: *mut u8, size: usize, offset: usize) -> Result<is
 fn do_pwrite(fd: FileDesc, buf: *const u8, size: usize, offset: usize) -> Result<isize, Error> {
     let safe_buf = {
         check_array(buf, size)?;
-        unsafe { std::slice::from_raw_parts(buf, size) }
+        unsafe { core::slice::from_raw_parts(buf, size) }
     };
     let len = fs::do_pwrite(fd, safe_buf, offset)?;
     Ok(len as isize)
@@ -634,7 +634,7 @@ fn do_ftruncate(fd: FileDesc, len: usize) -> Result<isize, Error> {
 fn do_getdents64(fd: FileDesc, buf: *mut u8, buf_size: usize) -> Result<isize, Error> {
     let safe_buf = {
         check_mut_array(buf, buf_size)?;
-        unsafe { std::slice::from_raw_parts_mut(buf, buf_size) }
+        unsafe { core::slice::from_raw_parts_mut(buf, buf_size) }
     };
     let len = fs::do_getdents64(fd, safe_buf)?;
     Ok(len as isize)
@@ -824,7 +824,7 @@ fn do_unknown(
 fn do_getcwd(buf: *mut u8, size: usize) -> Result<isize, Error> {
     let safe_buf = {
         check_mut_array(buf, size)?;
-        unsafe { std::slice::from_raw_parts_mut(buf, size) }
+        unsafe { core::slice::from_raw_parts_mut(buf, size) }
     };
     let proc_ref = process::get_current();
     let mut proc = proc_ref.lock().unwrap();
@@ -887,7 +887,7 @@ fn do_readlink(path: *const i8, buf: *mut u8, size: usize) -> Result<isize, Erro
     let path = clone_cstring_safely(path)?.to_string_lossy().into_owned();
     let buf = {
         check_array(buf, size)?;
-        unsafe { std::slice::from_raw_parts_mut(buf, size) }
+        unsafe { core::slice::from_raw_parts_mut(buf, size) }
     };
     let len = fs::do_readlink(&path, buf)?;
     Ok(len as isize)
@@ -1301,7 +1301,7 @@ fn do_select(
 
 fn do_poll(fds: *mut libc::pollfd, nfds: libc::nfds_t, timeout: c_int) -> Result<isize, Error> {
     check_mut_array(fds, nfds as usize)?;
-    let polls = unsafe { std::slice::from_raw_parts_mut(fds, nfds as usize) };
+    let polls = unsafe { core::slice::from_raw_parts_mut(fds, nfds as usize) };
 
     let n = fs::do_poll(polls, timeout)?;
     Ok(n as isize)
@@ -1346,7 +1346,7 @@ fn do_epoll_wait(
     };
     let events = {
         check_mut_array(events, maxevents)?;
-        unsafe { std::slice::from_raw_parts_mut(events, maxevents) }
+        unsafe { core::slice::from_raw_parts_mut(events, maxevents) }
     };
     let count = fs::do_epoll_wait(epfd as FileDesc, events, timeout)?;
     Ok(count as isize)

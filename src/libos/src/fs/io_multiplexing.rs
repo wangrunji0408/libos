@@ -1,9 +1,9 @@
 use super::*;
-use std::any::Any;
-use std::collections::btree_map::BTreeMap;
-use std::fmt;
-use std::sync::atomic::spin_loop_hint;
-use std::vec::Vec;
+use alloc::collections::btree_map::BTreeMap;
+use alloc::vec::Vec;
+use core::any::Any;
+use core::fmt;
+use core::sync::atomic::spin_loop_hint;
 
 /// Forward to host `poll`
 /// (sgx_libc doesn't have `select`)

@@ -32,7 +32,7 @@ pub struct Process {
 }
 
 pub type ProcessRef = Arc<SgxMutex<Process>>;
-pub type ProcessWeakRef = std::sync::Weak<SgxMutex<Process>>;
+pub type ProcessWeakRef = alloc::sync::Weak<SgxMutex<Process>>;
 pub type FileTableRef = Arc<SgxMutex<FileTable>>;
 pub type ProcessVMRef = Arc<SgxMutex<ProcessVM>>;
 
