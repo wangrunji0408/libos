@@ -9,6 +9,7 @@ crate-type = ["staticlib"]
 [dependencies]
 bitflags = "1.1"
 log = "0.4"
+spin = "0.5"
 lazy_static = { version = "1.3.0", features = ["spin_no_std"] } # Implies nightly
 rcore-fs = { path = "../../deps/sefs/rcore-fs" }
 rcore-fs-sefs = { path = "../../deps/sefs/rcore-fs-sefs" }

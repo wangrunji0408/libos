@@ -25,12 +25,12 @@ pub type FileRef = Arc<Box<File>>;
 #[derive(Debug)]
 #[repr(C)]
 pub struct SgxFile {
-    inner: SgxMutex<SgxFileInner>,
+    inner: Mutex<SgxFileInner>,
 }
 
 impl SgxFile {
     pub fn new(
-        file: Arc<SgxMutex<fs_impl::SgxFile>>,
+        file: Arc<Mutex<fs_impl::SgxFile>>,
         is_readable: bool,
         is_writable: bool,
         is_append: bool,
@@ -40,7 +40,7 @@ impl SgxFile {
         }
 
         Ok(SgxFile {
-            inner: SgxMutex::new(SgxFileInner {
+            inner: Mutex::new(SgxFileInner {
                 pos: 0 as usize,
                 file: file,
                 is_readable,
@@ -53,45 +53,45 @@ impl SgxFile {
 
 impl File for SgxFile {
     fn read(&self, buf: &mut [u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
+        let mut inner_guard = self.inner.lock();
         let inner = inner_guard.borrow_mut();
         inner.read(buf)
     }
 
     fn write(&self, buf: &[u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
+        let mut inner_guard = self.inner.lock();
         let inner = inner_guard.borrow_mut();
         inner.write(buf)
     }
 
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
+        let mut inner_guard = self.inner.lock();
         let inner = inner_guard.borrow_mut();
         inner.seek(SeekFrom::Start(offset as u64))?;
         inner.read(buf)
     }
 
     fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
+        let mut inner_guard = self.inner.lock();
         let inner = inner_guard.borrow_mut();
         inner.seek(SeekFrom::Start(offset as u64))?;
         inner.write(buf)
     }
 
     fn readv(&self, bufs: &mut [&mut [u8]]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
+        let mut inner_guard = self.inner.lock();
         let inner = inner_guard.borrow_mut();
         inner.readv(bufs)
     }
 
     fn writev(&self, bufs: &[&[u8]]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
+        let mut inner_guard = self.inner.lock();
         let inner = inner_guard.borrow_mut();
         inner.writev(bufs)
     }
 
     fn seek(&self, pos: SeekFrom) -> Result<off_t, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
+        let mut inner_guard = self.inner.lock();
         let inner = inner_guard.borrow_mut();
         inner.seek(pos)
     }
@@ -126,7 +126,7 @@ impl File for SgxFile {
 struct SgxFileInner {
     //    perms: FilePerms,
     pos: usize,
-    file: Arc<SgxMutex<fs_impl::SgxFile>>,
+    file: Arc<Mutex<fs_impl::SgxFile>>,
     is_readable: bool,
     is_writable: bool,
     is_append: bool,
@@ -138,7 +138,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not writable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
+        let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
         let seek_pos = if !self.is_append {
@@ -166,7 +166,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not readable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
+        let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
         let seek_pos = SeekFrom::Start(self.pos as u64);
@@ -183,7 +183,7 @@ impl SgxFileInner {
     }
 
     pub fn seek(&mut self, pos: SeekFrom) -> Result<off_t, Error> {
-        let mut file_guard = self.file.lock().unwrap();
+        let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
         let pos = match pos {
@@ -215,7 +215,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not writable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
+        let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
         let seek_pos = if !self.is_append {
@@ -255,7 +255,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not readable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
+        let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
         let seek_pos = SeekFrom::Start(self.pos as u64);

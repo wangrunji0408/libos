@@ -1,12 +1,13 @@
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
+use alloc::sync::Arc;
 use rcore_fs::dev::TimeProvider;
 use rcore_fs::vfs::Timespec;
 use rcore_fs_sefs::dev::*;
+use spin::Mutex;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sgxfs::{remove, OpenOptions, SgxFile};
-use std::sync::{Arc, SgxMutex as Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct SgxStorage {
@@ -28,7 +29,7 @@ impl SgxStorage {
     #[cfg(feature = "sgx_file_cache")]
     fn get(&self, file_id: usize, open_fn: impl FnOnce(&Self) -> LockedFile) -> LockedFile {
         // query cache
-        let mut caches = self.file_cache.lock().unwrap();
+        let mut caches = self.file_cache.lock();
         if let Some(locked_file) = caches.get(&file_id) {
             // hit, return
             return locked_file.clone();
@@ -84,7 +85,7 @@ impl Storage for SgxStorage {
         path.push(format!("{}", file_id));
         remove(path).expect("failed to remove SgxFile");
         // remove from cache
-        let mut caches = self.file_cache.lock().unwrap();
+        let mut caches = self.file_cache.lock();
         caches.remove(&file_id);
         Ok(())
     }
@@ -102,7 +103,7 @@ impl File for LockedFile {
         if buf.len() == 0 {
             return Ok(0);
         }
-        let mut file = self.0.lock().unwrap();
+        let mut file = self.0.lock();
         let offset = offset as u64;
         file.seek(SeekFrom::Start(offset))
             .expect("failed to seek SgxFile");
@@ -114,7 +115,7 @@ impl File for LockedFile {
         if buf.len() == 0 {
             return Ok(0);
         }
-        let mut file = self.0.lock().unwrap();
+        let mut file = self.0.lock();
 
         // SgxFile do not support seek a position after the end.
         // So check the size and padding zeros if necessary.
@@ -142,7 +143,7 @@ impl File for LockedFile {
     }
 
     fn flush(&self) -> DevResult<()> {
-        let mut file = self.0.lock().unwrap();
+        let mut file = self.0.lock();
         file.flush().expect("failed to flush SgxFile");
         Ok(())
     }

@@ -46,7 +46,7 @@ pub fn do_clone(
     // TODO: return error for unsupported flags
 
     let current_ref = get_current();
-    let current = current_ref.lock().unwrap();
+    let current = current_ref.lock();
 
     let (new_thread_pid, new_thread_ref) = {
         let task = new_thread_task(stack_addr, new_tls)?;
@@ -58,15 +58,15 @@ pub fn do_clone(
     };
 
     if let Some(ctid) = ctid {
-        let mut new_thread = new_thread_ref.lock().unwrap();
+        let mut new_thread = new_thread_ref.lock();
         new_thread.clear_child_tid = Some(ctid);
     }
 
     // TODO: always get parent lock first to avoid deadlock
     {
         let parent_ref = current.parent.as_ref().unwrap();
-        let mut parent = parent_ref.lock().unwrap();
-        let mut new_thread = new_thread_ref.lock().unwrap();
+        let mut parent = parent_ref.lock();
+        let mut new_thread = new_thread_ref.lock();
         parent.children.push(Arc::downgrade(&new_thread_ref));
         new_thread.parent = Some(parent_ref.clone());
 
@@ -104,7 +104,7 @@ fn new_thread_task(user_stack: usize, new_tls: Option<usize>) -> Result<Task, Er
 pub fn do_set_tid_address(tidptr: *mut pid_t) -> Result<pid_t, Error> {
     info!("set_tid_address: tidptr: {:#x}", tidptr as usize);
     let current_ref = get_current();
-    let mut current = current_ref.lock().unwrap();
+    let mut current = current_ref.lock();
     current.clear_child_tid = Some(tidptr);
     Ok(current.get_tid())
 }

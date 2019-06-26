@@ -14,14 +14,14 @@ unsafe impl Send for ChildProcessFilter {}
 
 pub fn do_exit(exit_status: i32) {
     let current_ref = get_current();
-    let mut current = current_ref.lock().unwrap();
+    let mut current = current_ref.lock();
     // Update current
     current.exit_status = exit_status;
     current.status = Status::ZOMBIE;
 
     // Update children
     for child_ref in current.get_children_iter() {
-        let mut child = child_ref.lock().unwrap();
+        let mut child = child_ref.lock();
         child.parent = Some(IDLE_PROCESS.clone());
     }
     current.children.clear();
@@ -67,11 +67,11 @@ pub fn do_exit(exit_status: i32) {
 pub fn do_wait4(child_filter: &ChildProcessFilter, exit_status: &mut i32) -> Result<pid_t, Error> {
     let current_ref = get_current();
     let waiter = {
-        let mut current = current_ref.lock().unwrap();
+        let mut current = current_ref.lock();
 
         let mut any_child_to_wait_for = false;
         for child_ref in current.get_children_iter() {
-            let child = child_ref.lock().unwrap();
+            let child = child_ref.lock();
 
             let may_wait_for = match child_filter {
                 ChildProcessFilter::WithAnyPID => true,
@@ -105,11 +105,11 @@ pub fn do_wait4(child_filter: &ChildProcessFilter, exit_status: &mut i32) -> Res
 
     let child_pid = waiter.sleep_until_woken_with_result();
 
-    let mut current = current_ref.lock().unwrap();
+    let mut current = current_ref.lock();
     let child_i = {
         let mut child_i_opt = None;
         for (child_i, child_ref) in current.get_children_iter().enumerate() {
-            let child = child_ref.lock().unwrap();
+            let child = child_ref.lock();
             if child.get_pid() != child_pid {
                 continue;
             }
@@ -134,6 +134,6 @@ pub fn do_wait4(child_filter: &ChildProcessFilter, exit_status: &mut i32) -> Res
 fn lock_two_in_order<'a>(
     first_ref: &'a ProcessRef,
     second_ref: &'a ProcessRef,
-) -> (SgxMutexGuard<'a, Process>, SgxMutexGuard<'a, Process>) {
-    (first_ref.lock().unwrap(), second_ref.lock().unwrap())
+) -> (MutexGuard<'a, Process>, MutexGuard<'a, Process>) {
+    (first_ref.lock(), second_ref.lock())
 }

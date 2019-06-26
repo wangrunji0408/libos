@@ -20,8 +20,8 @@ pub fn do_select(
     let mut polls = Vec::<libc::pollfd>::new();
 
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_table_ref = proc.get_files().lock().unwrap();
+    let mut proc = current_ref.lock();
+    let file_table_ref = proc.get_files().lock();
 
     for fd in 0..nfds {
         let (r, w, e) = (
@@ -116,11 +116,11 @@ pub fn do_poll(polls: &mut [libc::pollfd], timeout: c_int) -> Result<usize, Erro
     );
 
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
+    let mut proc = current_ref.lock();
 
     // convert libos fd to Linux fd
     for poll in polls.iter_mut() {
-        let file_ref = proc.get_files().lock().unwrap().get(poll.fd as FileDesc)?;
+        let file_ref = proc.get_files().lock().get(poll.fd as FileDesc)?;
         if let Ok(socket) = file_ref.as_socket() {
             poll.fd = socket.fd();
         } else if let Ok(socket) = file_ref.as_unix_socket() {
@@ -161,13 +161,10 @@ pub fn do_epoll_create1(flags: c_int) -> Result<FileDesc, Error> {
     let epoll = EpollFile::new()?;
     let file_ref: Arc<Box<File>> = Arc::new(Box::new(epoll));
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
+    let mut proc = current_ref.lock();
     let fd = {
         let close_on_spawn = flags & libc::EPOLL_CLOEXEC != 0;
-        proc.get_files()
-            .lock()
-            .unwrap()
-            .put(file_ref, close_on_spawn)
+        proc.get_files().lock().put(file_ref, close_on_spawn)
     };
     Ok(fd)
 }
@@ -181,10 +178,10 @@ pub fn do_epoll_ctl(
     info!("epoll_ctl: epfd: {}, op: {:?}, fd: {}", epfd, op, fd);
 
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let mut file_table_ref = proc.get_files().lock().unwrap();
+    let mut proc = current_ref.lock();
+    let mut file_table_ref = proc.get_files().lock();
     let mut file_ref = file_table_ref.get(epfd)?;
-    let mut epoll = file_ref.as_epoll()?.inner.lock().unwrap();
+    let mut epoll = file_ref.as_epoll()?.inner.lock();
 
     let host_fd = file_table_ref.get(fd)?.as_socket()?.fd() as FileDesc;
     epoll.ctl(op, host_fd, event)?;
@@ -205,9 +202,9 @@ pub fn do_epoll_wait(
     );
 
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let mut file_ref = proc.get_files().lock().unwrap().get(epfd)?;
-    let mut epoll = file_ref.as_epoll()?.inner.lock().unwrap();
+    let mut proc = current_ref.lock();
+    let mut file_ref = proc.get_files().lock().get(epfd)?;
+    let mut epoll = file_ref.as_epoll()?.inner.lock();
 
     let count = epoll.wait(events, timeout)?;
     Ok(count)
@@ -241,13 +238,13 @@ impl FdSetExt for libc::fd_set {
 }
 
 pub struct EpollFile {
-    inner: SgxMutex<EpollFileInner>,
+    inner: Mutex<EpollFileInner>,
 }
 
 impl EpollFile {
     pub fn new() -> Result<Self, Error> {
         Ok(Self {
-            inner: SgxMutex::new(EpollFileInner::new()?),
+            inner: Mutex::new(EpollFileInner::new()?),
         })
     }
 }
@@ -360,7 +357,7 @@ impl File for EpollFile {
 
 impl Debug for EpollFile {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock();
         f.debug_struct("EpollFile")
             .field("epoll_fd", &inner.epoll_fd)
             .finish()

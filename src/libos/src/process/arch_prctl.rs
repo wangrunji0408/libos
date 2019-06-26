@@ -29,13 +29,13 @@ pub fn do_arch_prctl(code: ArchPrctlCode, addr: *mut usize) -> Result<(), Error>
     match code {
         ArchPrctlCode::ARCH_SET_FS => {
             let current_ref = get_current();
-            let mut current = current_ref.lock().unwrap();
+            let mut current = current_ref.lock();
             let task = &mut current.task;
             task.user_fsbase_addr = addr as usize;
         }
         ArchPrctlCode::ARCH_GET_FS => {
             let current_ref = get_current();
-            let current = current_ref.lock().unwrap();
+            let current = current_ref.lock();
             let task = &current.task;
             unsafe {
                 *addr = task.user_fsbase_addr;

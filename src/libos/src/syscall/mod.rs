@@ -824,7 +824,7 @@ fn do_getcwd(buf: *mut u8, size: usize) -> Result<isize, Error> {
         unsafe { core::slice::from_raw_parts_mut(buf, size) }
     };
     let proc_ref = process::get_current();
-    let mut proc = proc_ref.lock().unwrap();
+    let mut proc = proc_ref.lock();
     let cwd = proc.get_cwd();
     if cwd.len() + 1 > safe_buf.len() {
         return errno!(ERANGE, "buf is not long enough");
@@ -912,8 +912,8 @@ fn do_fcntl(fd: FileDesc, cmd: u32, arg: u64) -> Result<isize, Error> {
 fn do_ioctl(fd: FileDesc, cmd: c_int, argp: *mut c_int) -> Result<isize, Error> {
     info!("ioctl: fd: {}, cmd: {}, argp: {:?}", fd, cmd, argp);
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let ret = try_libc!(libc::ocall::ioctl_arg1(socket.fd(), cmd, argp));
         Ok(ret as isize)
@@ -956,9 +956,9 @@ fn do_socket(domain: c_int, socket_type: c_int, protocol: c_int) -> Result<isize
     };
 
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
+    let mut proc = current_ref.lock();
 
-    let fd = proc.get_files().lock().unwrap().put(file_ref, false);
+    let fd = proc.get_files().lock().put(file_ref, false);
     Ok(fd as isize)
 }
 
@@ -972,8 +972,8 @@ fn do_connect(
         fd, addr, addr_len
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let ret = try_libc!(libc::ocall::connect(socket.fd(), addr, addr_len));
         Ok(ret as isize)
@@ -999,14 +999,14 @@ fn do_accept4(
         fd, addr, addr_len, flags
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let socket = file_ref.as_socket()?;
 
         let new_socket = socket.accept(addr, addr_len, flags)?;
         let new_file_ref: Arc<Box<File>> = Arc::new(Box::new(new_socket));
-        let new_fd = proc.get_files().lock().unwrap().put(new_file_ref, false);
+        let new_fd = proc.get_files().lock().put(new_file_ref, false);
 
         Ok(new_fd as isize)
     } else if let Ok(unix_socket) = file_ref.as_unix_socket() {
@@ -1015,7 +1015,7 @@ fn do_accept4(
 
         let new_socket = unix_socket.accept()?;
         let new_file_ref: Arc<Box<File>> = Arc::new(Box::new(new_socket));
-        let new_fd = proc.get_files().lock().unwrap().put(new_file_ref, false);
+        let new_fd = proc.get_files().lock().put(new_file_ref, false);
 
         Ok(new_fd as isize)
     } else {
@@ -1026,8 +1026,8 @@ fn do_accept4(
 fn do_shutdown(fd: c_int, how: c_int) -> Result<isize, Error> {
     info!("shutdown: fd: {}, how: {}", fd, how);
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let ret = try_libc!(libc::ocall::shutdown(socket.fd(), how));
         Ok(ret as isize)
@@ -1043,8 +1043,8 @@ fn do_bind(
 ) -> Result<isize, Error> {
     info!("bind: fd: {}, addr: {:?}, addr_len: {}", fd, addr, addr_len);
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         check_ptr(addr)?; // TODO: check addr_len
         let ret = try_libc!(libc::ocall::bind(socket.fd(), addr, addr_len));
@@ -1063,8 +1063,8 @@ fn do_bind(
 fn do_listen(fd: c_int, backlog: c_int) -> Result<isize, Error> {
     info!("listen: fd: {}, backlog: {}", fd, backlog);
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let ret = try_libc!(libc::ocall::listen(socket.fd(), backlog));
         Ok(ret as isize)
@@ -1088,8 +1088,8 @@ fn do_setsockopt(
         fd, level, optname, optval, optlen
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let ret = try_libc!(libc::ocall::setsockopt(
             socket.fd(),
@@ -1119,8 +1119,8 @@ fn do_getsockopt(
         fd, level, optname, optval, optlen
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     let socket = file_ref.as_socket()?;
 
     let ret = try_libc!(libc::ocall::getsockopt(
@@ -1143,8 +1143,8 @@ fn do_getpeername(
         fd, addr, addr_len
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let ret = try_libc!(libc::ocall::getpeername(socket.fd(), addr, addr_len));
         Ok(ret as isize)
@@ -1169,8 +1169,8 @@ fn do_getsockname(
         fd, addr, addr_len
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     if let Ok(socket) = file_ref.as_socket() {
         let ret = try_libc!(libc::ocall::getsockname(socket.fd(), addr, addr_len));
         Ok(ret as isize)
@@ -1195,8 +1195,8 @@ fn do_sendto(
         fd, base, len, addr, addr_len
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     let socket = file_ref.as_socket()?;
 
     let ret = try_libc!(libc::ocall::sendto(
@@ -1223,8 +1223,8 @@ fn do_recvfrom(
         fd, base, len, flags, addr, addr_len
     );
     let current_ref = process::get_current();
-    let mut proc = current_ref.lock().unwrap();
-    let file_ref = proc.get_files().lock().unwrap().get(fd as FileDesc)?;
+    let mut proc = current_ref.lock();
+    let file_ref = proc.get_files().lock().get(fd as FileDesc)?;
     let socket = file_ref.as_socket()?;
 
     let ret = try_libc!(libc::ocall::recvfrom(

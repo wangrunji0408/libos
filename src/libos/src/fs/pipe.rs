@@ -17,10 +17,10 @@ impl Pipe {
         let mut ring_buf = RingBuf::new(PIPE_BUF_SIZE);
         Ok(Pipe {
             reader: PipeReader {
-                inner: SgxMutex::new(ring_buf.reader),
+                inner: Mutex::new(ring_buf.reader),
             },
             writer: PipeWriter {
-                inner: SgxMutex::new(ring_buf.writer),
+                inner: Mutex::new(ring_buf.writer),
             },
         })
     }
@@ -28,12 +28,12 @@ impl Pipe {
 
 #[derive(Debug)]
 pub struct PipeReader {
-    inner: SgxMutex<RingBufReader>,
+    inner: Mutex<RingBufReader>,
 }
 
 impl File for PipeReader {
     fn read(&self, buf: &mut [u8]) -> Result<usize, Error> {
-        let ringbuf = self.inner.lock().unwrap();
+        let ringbuf = self.inner.lock();
         ringbuf.read(buf)
     }
 
@@ -50,7 +50,7 @@ impl File for PipeReader {
     }
 
     fn readv(&self, bufs: &mut [&mut [u8]]) -> Result<usize, Error> {
-        let mut ringbuf = self.inner.lock().unwrap();
+        let mut ringbuf = self.inner.lock();
         let mut total_bytes = 0;
         for buf in bufs {
             match ringbuf.read(buf) {
@@ -111,7 +111,7 @@ unsafe impl Sync for PipeReader {}
 
 #[derive(Debug)]
 pub struct PipeWriter {
-    inner: SgxMutex<RingBufWriter>,
+    inner: Mutex<RingBufWriter>,
 }
 
 impl File for PipeWriter {
@@ -120,7 +120,7 @@ impl File for PipeWriter {
     }
 
     fn write(&self, buf: &[u8]) -> Result<usize, Error> {
-        let ringbuf = self.inner.lock().unwrap();
+        let ringbuf = self.inner.lock();
         ringbuf.write(buf)
     }
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, Error> {
@@ -136,7 +136,7 @@ impl File for PipeWriter {
     }
 
     fn writev(&self, bufs: &[&[u8]]) -> Result<usize, Error> {
-        let ringbuf = self.inner.lock().unwrap();
+        let ringbuf = self.inner.lock();
         let mut total_bytes = 0;
         for buf in bufs {
             match ringbuf.write(buf) {

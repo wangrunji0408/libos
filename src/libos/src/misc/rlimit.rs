@@ -5,7 +5,7 @@ use process::pid_t;
 pub struct ResourceLimits {
     rlimits: [rlimit_t; RLIMIT_COUNT],
 }
-pub type ResourceLimitsRef = Arc<SgxMutex<ResourceLimits>>;
+pub type ResourceLimitsRef = Arc<Mutex<ResourceLimits>>;
 
 impl ResourceLimits {
     pub fn get(&self, resource: resource_t) -> &rlimit_t {
@@ -98,9 +98,9 @@ pub fn do_prlimit(
     } else {
         process::get(pid)?
     };
-    let mut process = process_ref.lock().unwrap();
+    let mut process = process_ref.lock();
     let rlimits_ref = process.get_rlimits();
-    let mut rlimits = rlimits_ref.lock().unwrap();
+    let mut rlimits = rlimits_ref.lock();
     if let Some(old_limit) = old_limit {
         *old_limit = *rlimits.get(resource)
     }

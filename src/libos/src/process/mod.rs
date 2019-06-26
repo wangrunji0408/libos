@@ -31,36 +31,36 @@ pub struct Process {
     rlimits: ResourceLimitsRef,
 }
 
-pub type ProcessRef = Arc<SgxMutex<Process>>;
-pub type ProcessWeakRef = alloc::sync::Weak<SgxMutex<Process>>;
-pub type FileTableRef = Arc<SgxMutex<FileTable>>;
-pub type ProcessVMRef = Arc<SgxMutex<ProcessVM>>;
+pub type ProcessRef = Arc<Mutex<Process>>;
+pub type ProcessWeakRef = alloc::sync::Weak<Mutex<Process>>;
+pub type FileTableRef = Arc<Mutex<FileTable>>;
+pub type ProcessVMRef = Arc<Mutex<ProcessVM>>;
 
 pub fn do_getpid() -> pid_t {
     let current_ref = get_current();
-    let current = current_ref.lock().unwrap();
+    let current = current_ref.lock();
     current.get_pid()
 }
 
 pub fn do_gettid() -> pid_t {
     let current_ref = get_current();
-    let current = current_ref.lock().unwrap();
+    let current = current_ref.lock();
     current.get_tid()
 }
 
 pub fn do_getpgid() -> pid_t {
     let current_ref = get_current();
-    let current = current_ref.lock().unwrap();
+    let current = current_ref.lock();
     current.get_pgid()
 }
 
 pub fn do_getppid() -> pid_t {
     let parent_ref = {
         let current_ref = get_current();
-        let current = current_ref.lock().unwrap();
+        let current = current_ref.lock();
         current.get_parent().clone()
     };
-    let parent = parent_ref.lock().unwrap();
+    let parent = parent_ref.lock();
     parent.get_pid()
 }
 

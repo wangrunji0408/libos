@@ -3,7 +3,7 @@ use alloc::collections::btree_map::BTreeMap;
 use alloc::prelude::ToString;
 use core::fmt;
 use core::sync::atomic::spin_loop_hint;
-use std::sync::SgxMutex as Mutex;
+use spin::Mutex;
 use util::ring_buf::{RingBuf, RingBufReader, RingBufWriter};
 
 pub struct UnixSocketFile {
@@ -12,12 +12,12 @@ pub struct UnixSocketFile {
 
 impl File for UnixSocketFile {
     fn read(&self, buf: &mut [u8]) -> Result<usize, Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.read(buf)
     }
 
     fn write(&self, buf: &[u8]) -> Result<usize, Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.write(buf)
     }
 
@@ -30,7 +30,7 @@ impl File for UnixSocketFile {
     }
 
     fn readv(&self, bufs: &mut [&mut [u8]]) -> Result<usize, Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         let mut total_len = 0;
         for buf in bufs {
             match inner.read(buf) {
@@ -45,7 +45,7 @@ impl File for UnixSocketFile {
     }
 
     fn writev(&self, bufs: &[&[u8]]) -> Result<usize, Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         let mut total_len = 0;
         for buf in bufs {
             match inner.write(buf) {
@@ -112,17 +112,17 @@ impl UnixSocketFile {
     }
 
     pub fn bind(&self, path: impl AsRef<str>) -> Result<(), Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.bind(path)
     }
 
     pub fn listen(&self) -> Result<(), Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.listen()
     }
 
     pub fn accept(&self) -> Result<UnixSocketFile, Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         let new_socket = inner.accept()?;
         Ok(UnixSocketFile {
             inner: Mutex::new(new_socket),
@@ -130,17 +130,17 @@ impl UnixSocketFile {
     }
 
     pub fn connect(&self, path: impl AsRef<str>) -> Result<(), Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.connect(path)
     }
 
     pub fn poll(&self) -> Result<(bool, bool, bool), Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.poll()
     }
 
     pub fn ioctl(&self, cmd: c_int, argp: *mut c_int) -> Result<(), Error> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.ioctl(cmd, argp)
     }
 }
@@ -290,19 +290,19 @@ pub struct UnixSocketObject {
 
 impl UnixSocketObject {
     fn push(&self, unix_socket: UnixSocket) {
-        let mut queue = self.accepted_sockets.lock().unwrap();
+        let mut queue = self.accepted_sockets.lock();
         queue.push_back(unix_socket);
     }
     fn pop(&self) -> Option<UnixSocket> {
-        let mut queue = self.accepted_sockets.lock().unwrap();
+        let mut queue = self.accepted_sockets.lock();
         queue.pop_front()
     }
     fn get(path: impl AsRef<str>) -> Option<Arc<Self>> {
-        let mut paths = UNIX_SOCKET_OBJS.lock().unwrap();
+        let mut paths = UNIX_SOCKET_OBJS.lock();
         paths.get(path.as_ref()).map(|obj| obj.clone())
     }
     fn create(path: impl AsRef<str>) -> Result<Arc<Self>, Error> {
-        let mut paths = UNIX_SOCKET_OBJS.lock().unwrap();
+        let mut paths = UNIX_SOCKET_OBJS.lock();
         if paths.contains_key(path.as_ref()) {
             return errno!(EADDRINUSE, "unix socket path already exists");
         }
@@ -314,7 +314,7 @@ impl UnixSocketObject {
         Ok(obj)
     }
     fn remove(path: impl AsRef<str>) {
-        let mut paths = UNIX_SOCKET_OBJS.lock().unwrap();
+        let mut paths = UNIX_SOCKET_OBJS.lock();
         paths.remove(path.as_ref());
     }
 }

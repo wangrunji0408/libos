@@ -17,7 +17,7 @@ lazy_static! {
 
 pub struct INodeFile {
     inode: Arc<INode>,
-    offset: SgxMutex<usize>,
+    offset: Mutex<usize>,
     options: OpenOptions,
 }
 
@@ -34,7 +34,7 @@ impl File for INodeFile {
         if !self.options.read {
             return errno!(EBADF, "File not readable");
         }
-        let mut offset = self.offset.lock().unwrap();
+        let mut offset = self.offset.lock();
         let len = self.inode.read_at(*offset, buf)?;
         *offset += len;
         Ok(len)
@@ -44,7 +44,7 @@ impl File for INodeFile {
         if !self.options.write {
             return errno!(EBADF, "File not writable");
         }
-        let mut offset = self.offset.lock().unwrap();
+        let mut offset = self.offset.lock();
         if self.options.append {
             let info = self.inode.metadata()?;
             *offset = info.size;
@@ -74,7 +74,7 @@ impl File for INodeFile {
         if !self.options.read {
             return errno!(EBADF, "File not readable");
         }
-        let mut offset = self.offset.lock().unwrap();
+        let mut offset = self.offset.lock();
         let mut total_len = 0;
         for buf in bufs {
             match self.inode.read_at(*offset, buf) {
@@ -93,7 +93,7 @@ impl File for INodeFile {
         if !self.options.write {
             return errno!(EBADF, "File not writable");
         }
-        let mut offset = self.offset.lock().unwrap();
+        let mut offset = self.offset.lock();
         if self.options.append {
             let info = self.inode.metadata()?;
             *offset = info.size;
@@ -113,7 +113,7 @@ impl File for INodeFile {
     }
 
     fn seek(&self, pos: SeekFrom) -> Result<off_t, Error> {
-        let mut offset = self.offset.lock().unwrap();
+        let mut offset = self.offset.lock();
         *offset = match pos {
             SeekFrom::Start(off) => off as usize,
             SeekFrom::End(off) => (self.inode.metadata()?.size as i64 + off) as usize,
@@ -149,7 +149,7 @@ impl File for INodeFile {
         if !self.options.read {
             return errno!(EBADF, "File not readable. Can't read entry.");
         }
-        let mut offset = self.offset.lock().unwrap();
+        let mut offset = self.offset.lock();
         let name = self.inode.get_entry(*offset)?;
         *offset += 1;
         Ok(name)
@@ -164,7 +164,7 @@ impl INodeFile {
     pub fn open(inode: Arc<INode>, options: OpenOptions) -> Result<Self, Error> {
         Ok(INodeFile {
             inode,
-            offset: SgxMutex::new(0),
+            offset: Mutex::new(0),
             options,
         })
     }
@@ -201,7 +201,7 @@ impl Debug for INodeFile {
         write!(
             f,
             "INodeFile {{ inode: ???, pos: {}, options: {:?} }}",
-            *self.offset.lock().unwrap(),
+            *self.offset.lock(),
             self.options
         )
     }

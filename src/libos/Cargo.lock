@@ -12,6 +12,7 @@ dependencies = [
  "sgx_trts 1.0.6",
  "sgx_tstd 1.0.6",
  "sgx_types 1.0.6",
+ "spin 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xmas-elf 0.6.2",
 ]
 

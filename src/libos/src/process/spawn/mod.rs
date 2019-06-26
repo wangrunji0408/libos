@@ -58,7 +58,7 @@ pub fn do_spawn<P: AsRef<Path>>(
     };
 
     let (new_pid, new_process_ref) = {
-        let cwd = parent_ref.lock().unwrap().get_cwd().to_owned();
+        let cwd = parent_ref.lock().get_cwd().to_owned();
         let vm = init_vm::do_init(&elf_file, &elf_buf[..])?;
         let base_addr = vm.get_base_addr();
         let program_entry = {
@@ -73,10 +73,10 @@ pub fn do_spawn<P: AsRef<Path>>(
             let stack_top = vm.get_stack_top();
             init_task(program_entry, stack_top, argv, envp, &auxtbl)?
         };
-        let vm_ref = Arc::new(SgxMutex::new(vm));
+        let vm_ref = Arc::new(Mutex::new(vm));
         let files_ref = {
             let files = init_files(parent_ref, file_actions)?;
-            Arc::new(SgxMutex::new(files))
+            Arc::new(Mutex::new(files))
         };
         let rlimits_ref = Default::default();
         Process::new(&cwd, task, vm_ref, files_ref, rlimits_ref)?
@@ -89,11 +89,11 @@ pub fn do_spawn<P: AsRef<Path>>(
 
 fn init_files(parent_ref: &ProcessRef, file_actions: &[FileAction]) -> Result<FileTable, Error> {
     // Usually, we just inherit the file table from the parent
-    let parent = parent_ref.lock().unwrap();
+    let parent = parent_ref.lock();
     let should_inherit_file_table = parent.get_pid() > 0;
     if should_inherit_file_table {
         // Fork: clone file table
-        let mut cloned_file_table = parent.get_files().lock().unwrap().clone();
+        let mut cloned_file_table = parent.get_files().lock().clone();
         // Perform file actions to modify the cloned file table
         for file_action in file_actions {
             match file_action {
@@ -181,8 +181,8 @@ fn init_auxtbl(
 }
 
 fn parent_adopts_new_child(parent_ref: &ProcessRef, child_ref: &ProcessRef) {
-    let mut parent = parent_ref.lock().unwrap();
-    let mut child = child_ref.lock().unwrap();
+    let mut parent = parent_ref.lock();
+    let mut child = child_ref.lock();
     parent.children.push(Arc::downgrade(child_ref));
     child.parent = Some(parent_ref.clone());
 }

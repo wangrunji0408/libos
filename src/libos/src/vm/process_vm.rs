@@ -3,7 +3,7 @@ use super::*;
 // TODO: examine the ProcessVM code for memory leakage
 
 lazy_static! {
-    static ref DATA_SPACE: SgxMutex<VMSpace> = {
+    static ref DATA_SPACE: Mutex<VMSpace> = {
         let (addr, size) = {
             let mut addr: usize = 0;
             let mut size: usize = 0;
@@ -16,7 +16,7 @@ lazy_static! {
                 Err(_) => panic!("Failed to create a VMSpace"),
             }
         };
-        SgxMutex::new(vm_space)
+        Mutex::new(vm_space)
     };
 }
 
@@ -49,7 +49,6 @@ impl ProcessVM {
             let data_domain_size = code_size + data_size + heap_size + stack_size + mmap_size;
             let data_domain = DATA_SPACE
                 .lock()
-                .unwrap()
                 .alloc_domain(data_domain_size, "data_domain")?;
             data_domain
         };
@@ -64,7 +63,7 @@ impl ProcessVM {
             Err(e) => {
                 // Note: we need to handle error here so that we can
                 // deallocate the data domain explictly.
-                DATA_SPACE.lock().unwrap().dealloc_domain(data_domain);
+                DATA_SPACE.lock().dealloc_domain(data_domain);
                 return Err(e);
             }
             Ok(vmas) => vmas,
@@ -296,7 +295,6 @@ impl Drop for ProcessVM {
         // Remove the domain from its parent space
         DATA_SPACE
             .lock()
-            .unwrap()
             .dealloc_domain(unbox(self.data_domain.take().unwrap()));
     }
 }

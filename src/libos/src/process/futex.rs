@@ -67,25 +67,25 @@ pub fn futex_op_and_flags_from_u32(bits: u32) -> Result<(FutexOp, FutexFlags), E
 /// Do futex wait
 pub fn futex_wait(futex_addr: *const i32, futex_val: i32) -> Result<(), Error> {
     let futex_key = FutexKey::new(futex_addr);
-    let futex_item = FUTEX_TABLE.lock().unwrap().get_or_new_item(futex_key);
+    let futex_item = FUTEX_TABLE.lock().get_or_new_item(futex_key);
 
     futex_item.wait(futex_val);
 
-    FUTEX_TABLE.lock().unwrap().put_item(futex_item);
+    FUTEX_TABLE.lock().put_item(futex_item);
     Ok(())
 }
 
 /// Do futex wake
 pub fn futex_wake(futex_addr: *const i32, max_count: usize) -> Result<usize, Error> {
     let futex_key = FutexKey::new(futex_addr);
-    let futex_item = FUTEX_TABLE.lock().unwrap().get_item(futex_key)?;
+    let futex_item = FUTEX_TABLE.lock().get_item(futex_key)?;
     let count = futex_item.wake(max_count);
-    FUTEX_TABLE.lock().unwrap().put_item(futex_item);
+    FUTEX_TABLE.lock().put_item(futex_item);
     Ok(count)
 }
 
 lazy_static! {
-    static ref FUTEX_TABLE: SgxMutex<FutexTable> = { SgxMutex::new(FutexTable::new()) };
+    static ref FUTEX_TABLE: Mutex<FutexTable> = { Mutex::new(FutexTable::new()) };
 }
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
@@ -103,19 +103,19 @@ impl FutexKey {
 
 struct FutexItem {
     key: FutexKey,
-    queue: SgxMutex<VecDeque<WaiterRef>>,
+    queue: Mutex<VecDeque<WaiterRef>>,
 }
 
 impl FutexItem {
     pub fn new(key: FutexKey) -> FutexItem {
         FutexItem {
             key: key,
-            queue: SgxMutex::new(VecDeque::new()),
+            queue: Mutex::new(VecDeque::new()),
         }
     }
 
     pub fn wake(&self, max_count: usize) -> usize {
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock();
         let mut count = 0;
         while count < max_count {
             let waiter = {
@@ -132,7 +132,7 @@ impl FutexItem {
     }
 
     pub fn wait(&self, futex_val: i32) -> () {
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock();
         if self.key.load_val() != futex_val {
             return;
         }

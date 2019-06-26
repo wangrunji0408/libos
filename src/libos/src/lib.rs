@@ -18,6 +18,7 @@ extern crate sgx_types;
 #[macro_use]
 extern crate sgx_tstd as std;
 extern crate sgx_trts;
+extern crate spin;
 extern crate xmas_elf;
 #[macro_use]
 extern crate lazy_static;

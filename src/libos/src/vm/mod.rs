@@ -22,18 +22,18 @@ pub fn do_mmap(addr: usize, size: usize, flags: VMAreaFlags) -> Result<usize, Er
         addr, size, flags
     );
     let current_ref = get_current();
-    let current_process = current_ref.lock().unwrap();
+    let current_process = current_ref.lock();
     let current_vm_ref = current_process.get_vm();
-    let mut current_vm = current_vm_ref.lock().unwrap();
+    let mut current_vm = current_vm_ref.lock();
     current_vm.mmap(addr, size, flags)
 }
 
 pub fn do_munmap(addr: usize, size: usize) -> Result<(), Error> {
     info!("munmap: addr: {:#x}, size: {:#x}", addr, size);
     let current_ref = get_current();
-    let current_process = current_ref.lock().unwrap();
+    let current_process = current_ref.lock();
     let current_vm_ref = current_process.get_vm();
-    let mut current_vm = current_vm_ref.lock().unwrap();
+    let mut current_vm = current_vm_ref.lock();
     current_vm.munmap(addr, size)
 }
 
@@ -48,18 +48,18 @@ pub fn do_mremap(
         old_addr, old_size, options
     );
     let current_ref = get_current();
-    let current_process = current_ref.lock().unwrap();
+    let current_process = current_ref.lock();
     let current_vm_ref = current_process.get_vm();
-    let mut current_vm = current_vm_ref.lock().unwrap();
+    let mut current_vm = current_vm_ref.lock();
     current_vm.mremap(old_addr, old_size, options)
 }
 
 pub fn do_brk(addr: usize) -> Result<usize, Error> {
     info!("brk: addr: {:#x}", addr);
     let current_ref = get_current();
-    let current_process = current_ref.lock().unwrap();
+    let current_process = current_ref.lock();
     let current_vm_ref = current_process.get_vm();
-    let mut current_vm = current_vm_ref.lock().unwrap();
+    let mut current_vm = current_vm_ref.lock();
     current_vm.brk(addr)
 }
 

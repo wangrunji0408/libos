@@ -9,6 +9,7 @@ pub use alloc::collections::{BTreeMap, VecDeque};
 pub use alloc::prelude::ToOwned;
 pub use alloc::rc::Rc;
 pub use alloc::string::String;
+pub use alloc::sync::Arc;
 pub use alloc::vec::Vec;
 pub use core::cell::{Cell, RefCell};
 pub use core::cmp::{max, min};
@@ -17,10 +18,8 @@ pub use core::fmt::{Debug, Display};
 pub use core::iter::Iterator;
 pub use core::marker::{Send, Sync};
 pub use core::result::Result;
+pub use spin::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 pub use std::io::{Read, Seek, SeekFrom, Write};
-pub use std::sync::{
-    Arc, SgxMutex, SgxMutexGuard, SgxRwLock, SgxRwLockReadGuard, SgxRwLockWriteGuard,
-};
 
 pub use errno::Errno;
 pub use errno::Errno::*;

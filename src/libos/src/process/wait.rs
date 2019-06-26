@@ -6,7 +6,7 @@ where
     D: Sized + Copy,
     R: Sized + Copy,
 {
-    inner: Arc<SgxMutex<WaiterInner<D, R>>>,
+    inner: Arc<Mutex<WaiterInner<D, R>>>,
     thread: *const c_void,
 }
 
@@ -36,7 +36,7 @@ where
     pub fn new(data: &D) -> Waiter<D, R> {
         Waiter {
             thread: unsafe { sgx_thread_get_self() },
-            inner: Arc::new(SgxMutex::new(WaiterInner {
+            inner: Arc::new(Mutex::new(WaiterInner {
                 is_woken: false,
                 data: *data,
                 result: None,
@@ -45,17 +45,17 @@ where
     }
 
     pub fn get_data(&self) -> D {
-        self.inner.lock().unwrap().data
+        self.inner.lock().data
     }
 
     pub fn sleep_until_woken_with_result(self) -> R {
-        while !self.inner.lock().unwrap().is_woken {
+        while !self.inner.lock().is_woken {
             unsafe {
                 wait_event(self.thread);
             }
         }
 
-        self.inner.lock().unwrap().result.unwrap()
+        self.inner.lock().result.unwrap()
     }
 }
 
@@ -93,7 +93,7 @@ where
         let mut waiters = &mut self.waiters;
         let del_waiter_i = {
             let waiter_i = waiters.iter().position(|waiter| {
-                let mut waiter_inner = waiter.inner.lock().unwrap();
+                let mut waiter_inner = waiter.inner.lock();
                 if let Some(waiter_result) = cond(&waiter_inner.data) {
                     waiter_inner.is_woken = true;
                     waiter_inner.result = Some(waiter_result);

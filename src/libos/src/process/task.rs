@@ -15,12 +15,11 @@ pub struct Task {
 }
 
 lazy_static! {
-    static ref NEW_PROCESS_QUEUE: SgxMutex<VecDeque<ProcessRef>> =
-        { SgxMutex::new(VecDeque::new()) };
+    static ref NEW_PROCESS_QUEUE: Mutex<VecDeque<ProcessRef>> = { Mutex::new(VecDeque::new()) };
 }
 
 pub fn enqueue_task(new_process: ProcessRef) {
-    NEW_PROCESS_QUEUE.lock().unwrap().push_back(new_process);
+    NEW_PROCESS_QUEUE.lock().push_back(new_process);
 
     let mut ret = 0;
     let ocall_status = unsafe { ocall_run_new_task(&mut ret) };
@@ -30,7 +29,7 @@ pub fn enqueue_task(new_process: ProcessRef) {
 }
 
 fn dequeue_task() -> Option<ProcessRef> {
-    NEW_PROCESS_QUEUE.lock().unwrap().pop_front()
+    NEW_PROCESS_QUEUE.lock().pop_front()
 }
 
 pub fn run_task() -> Result<i32, Error> {
@@ -39,7 +38,7 @@ pub fn run_task() -> Result<i32, Error> {
     set_current(&new_process);
 
     let (pid, task) = {
-        let mut process = new_process.lock().unwrap();
+        let mut process = new_process.lock();
         let pid = process.get_pid();
         let task = process.get_task_mut() as *mut Task;
         (pid, task)
@@ -51,7 +50,7 @@ pub fn run_task() -> Result<i32, Error> {
     }
 
     let exit_status = {
-        let mut process = new_process.lock().unwrap();
+        let mut process = new_process.lock();
         process.get_exit_status()
     };
 
@@ -65,8 +64,8 @@ pub fn run_task() -> Result<i32, Error> {
 }
 
 thread_local! {
-    static _CURRENT_PROCESS_PTR: Cell<*const SgxMutex<Process>> = {
-        Cell::new(0 as *const SgxMutex<Process>)
+    static _CURRENT_PROCESS_PTR: Cell<*const Mutex<Process>> = {
+        Cell::new(0 as *const Mutex<Process>)
     };
     // for log getting pid without locking process
     static _PID: Cell<pid_t> = Cell::new(0);
@@ -87,7 +86,7 @@ pub fn get_current() -> ProcessRef {
 }
 
 fn set_current(process: &ProcessRef) {
-    let pid = process.lock().unwrap().get_pid();
+    let pid = process.lock().get_pid();
     _PID.with(|p| p.set(pid));
 
     let process_ref_clone = process.clone();
@@ -100,7 +99,7 @@ fn set_current(process: &ProcessRef) {
 
 fn reset_current() {
     _PID.with(|p| p.set(0));
-    let mut process_ptr = _CURRENT_PROCESS_PTR.with(|cp| cp.replace(0 as *const SgxMutex<Process>));
+    let mut process_ptr = _CURRENT_PROCESS_PTR.with(|cp| cp.replace(0 as *const Mutex<Process>));
 
     // Prevent memory leakage
     unsafe {

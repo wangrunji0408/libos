@@ -52,7 +52,7 @@ pub fn do_faccessat(
 pub fn do_access(path: &str, mode: AccessModes) -> Result<(), Error> {
     info!("access: path: {:?}, mode: {:?}", path, mode);
     let current_ref = process::get_current();
-    let mut current = current_ref.lock().unwrap();
+    let mut current = current_ref.lock();
     let inode = current.lookup_inode(path)?;
     //let metadata = inode.get_metadata();
     // TODO: check metadata.mode with mode

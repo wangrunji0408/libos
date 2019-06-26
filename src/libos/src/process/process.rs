@@ -6,7 +6,7 @@ use vm::{ProcessVM, VMRangeTrait};
 lazy_static! {
     // Dummy object to make all processes having a parent
     pub static ref IDLE_PROCESS: ProcessRef = {
-        Arc::new(SgxMutex::new(Process {
+        Arc::new(Mutex::new(Process {
             task: Default::default(),
             status: Default::default(),
             pid: 0,
@@ -34,7 +34,7 @@ impl Process {
         rlimits_ref: ResourceLimitsRef,
     ) -> Result<(pid_t, ProcessRef), Error> {
         let new_pid = process_table::alloc_pid();
-        let new_process_ref = Arc::new(SgxMutex::new(Process {
+        let new_process_ref = Arc::new(Mutex::new(Process {
             task: task,
             status: Default::default(),
             pid: new_pid,
