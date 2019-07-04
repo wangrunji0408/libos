@@ -8,6 +8,7 @@
 #![feature(range_contains)]
 #![feature(core_intrinsics)]
 #![feature(core_panic_info)]
+#![feature(thread_local)]
 
 #[macro_use]
 extern crate alloc;
