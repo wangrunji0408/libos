@@ -63,20 +63,17 @@ pub fn run_task() -> Result<i32, Error> {
     Ok(exit_status)
 }
 
-thread_local! {
-    static _CURRENT_PROCESS_PTR: Cell<*const Mutex<Process>> = {
-        Cell::new(0 as *const Mutex<Process>)
-    };
-    // for log getting pid without locking process
-    static _PID: Cell<pid_t> = Cell::new(0);
-}
+#[thread_local]
+static _CURRENT_PROCESS_PTR: Cell<*const Mutex<Process>> = { Cell::new(0 as *const Mutex<Process>) };
+#[thread_local]
+static _PID: Cell<pid_t> = Cell::new(0);
 
 pub fn current_pid() -> pid_t {
-    _PID.with(|p| p.get())
+    _PID.get()
 }
 
 pub fn get_current() -> ProcessRef {
-    let current_ptr = _CURRENT_PROCESS_PTR.with(|cell| cell.get());
+    let current_ptr = _CURRENT_PROCESS_PTR.get();
 
     let current_ref = unsafe { Arc::from_raw(current_ptr) };
     let current_ref_clone = current_ref.clone();
@@ -87,19 +84,17 @@ pub fn get_current() -> ProcessRef {
 
 fn set_current(process: &ProcessRef) {
     let pid = process.lock().get_pid();
-    _PID.with(|p| p.set(pid));
+    _PID.set(pid);
 
     let process_ref_clone = process.clone();
     let process_ptr = Arc::into_raw(process_ref_clone);
 
-    _CURRENT_PROCESS_PTR.with(|cp| {
-        cp.set(process_ptr);
-    });
+    _CURRENT_PROCESS_PTR.set(process_ptr);
 }
 
 fn reset_current() {
-    _PID.with(|p| p.set(0));
-    let mut process_ptr = _CURRENT_PROCESS_PTR.with(|cp| cp.replace(0 as *const Mutex<Process>));
+    _PID.set(0);
+    let mut process_ptr = _CURRENT_PROCESS_PTR.replace(0 as *const Mutex<Process>);
 
     // Prevent memory leakage
     unsafe {
