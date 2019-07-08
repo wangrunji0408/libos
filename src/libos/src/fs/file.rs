@@ -53,46 +53,37 @@ impl SgxFile {
 
 impl File for SgxFile {
     fn read(&self, buf: &mut [u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
-        let inner = inner_guard.borrow_mut();
+        let mut inner = self.inner.lock().unwrap();
         inner.read(buf)
     }
 
     fn write(&self, buf: &[u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
-        let inner = inner_guard.borrow_mut();
+        let mut inner = self.inner.lock().unwrap();
         inner.write(buf)
     }
 
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
-        let inner = inner_guard.borrow_mut();
-        inner.seek(SeekFrom::Start(offset as u64))?;
-        inner.read(buf)
+        let mut inner = self.inner.lock().unwrap();
+        inner.read_at(offset, buf)
     }
 
     fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
-        let inner = inner_guard.borrow_mut();
-        inner.seek(SeekFrom::Start(offset as u64))?;
-        inner.write(buf)
+        let mut inner = self.inner.lock().unwrap();
+        inner.write_at(offset, buf)
     }
 
     fn readv(&self, bufs: &mut [&mut [u8]]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
-        let inner = inner_guard.borrow_mut();
+        let mut inner = self.inner.lock().unwrap();
         inner.readv(bufs)
     }
 
     fn writev(&self, bufs: &[&[u8]]) -> Result<usize, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
-        let inner = inner_guard.borrow_mut();
+        let mut inner = self.inner.lock().unwrap();
         inner.writev(bufs)
     }
 
     fn seek(&self, pos: SeekFrom) -> Result<off_t, Error> {
-        let mut inner_guard = self.inner.lock().unwrap();
-        let inner = inner_guard.borrow_mut();
+        let mut inner = self.inner.lock().unwrap();
         inner.seek(pos)
     }
 
@@ -138,8 +129,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not writable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
-        let file = file_guard.borrow_mut();
+        let mut file = self.file.lock().unwrap();
 
         let seek_pos = if !self.is_append {
             SeekFrom::Start(self.pos as u64)
@@ -166,8 +156,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not readable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
-        let file = file_guard.borrow_mut();
+        let mut file = self.file.lock().unwrap();
 
         let seek_pos = SeekFrom::Start(self.pos as u64);
         file.seek(seek_pos)
@@ -182,9 +171,24 @@ impl SgxFileInner {
         Ok(read_len)
     }
 
+    pub fn write_at(&mut self, offset: usize, buf: &[u8]) -> Result<usize, Error> {
+        let origin_pos = self.pos;
+        self.pos = offset;
+        let ret = self.write(buf);
+        self.pos = origin_pos;
+        ret
+    }
+
+    pub fn read_at(&mut self, offset: usize, buf: &mut [u8]) -> Result<usize, Error> {
+        let origin_pos = self.pos;
+        self.pos = offset;
+        let ret = self.read(buf);
+        self.pos = origin_pos;
+        ret
+    }
+
     pub fn seek(&mut self, pos: SeekFrom) -> Result<off_t, Error> {
-        let mut file_guard = self.file.lock().unwrap();
-        let file = file_guard.borrow_mut();
+        let mut file = self.file.lock().unwrap();
 
         let pos = match pos {
             SeekFrom::Start(absolute_offset) => pos,
@@ -215,8 +219,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not writable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
-        let file = file_guard.borrow_mut();
+        let mut file = self.file.lock().unwrap();
 
         let seek_pos = if !self.is_append {
             SeekFrom::Start(self.pos as u64)
@@ -255,8 +258,7 @@ impl SgxFileInner {
             return errno!(EINVAL, "File not readable");
         }
 
-        let mut file_guard = self.file.lock().unwrap();
-        let file = file_guard.borrow_mut();
+        let mut file = self.file.lock().unwrap();
 
         let seek_pos = SeekFrom::Start(self.pos as u64);
         file.seek(seek_pos)
