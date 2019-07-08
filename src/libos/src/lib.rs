@@ -1,8 +1,7 @@
 #![allow(unused)]
 #![crate_name = "occlum_rs"]
 #![crate_type = "staticlib"]
-#![cfg_attr(not(target_env = "sgx"), no_std)]
-#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+#![no_std]
 #![feature(alloc)]
 #![feature(allocator_api)]
 #![feature(range_contains)]
@@ -15,10 +14,10 @@ extern crate alloc;
 #[macro_use]
 extern crate bitflags;
 extern crate sgx_types;
-#[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
 extern crate sgx_trts;
+extern crate sgx_tprotected_fs;
 extern crate spin;
 extern crate xmas_elf;
 #[macro_use]
@@ -32,7 +31,6 @@ extern crate derive_builder;
 
 use sgx_trts::libc;
 use sgx_types::*;
-use std::backtrace::{self, PrintFormat};
 
 #[macro_use]
 mod prelude;

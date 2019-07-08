@@ -12,26 +12,18 @@ pub extern "C" fn libos_boot(path_buf: *const c_char, argv: *const *const c_char
         }
     };
 
-    let _ = backtrace::enable_backtrace("libocclum.signed.so", PrintFormat::Short);
-    std::panic::catch_unwind(|| {
-        backtrace::__rust_begin_short_backtrace(|| match do_boot(&path, &args) {
-            Ok(()) => 0,
-            Err(err) => EXIT_STATUS_INTERNAL_ERROR,
-        })
-    })
-    .unwrap_or(EXIT_STATUS_INTERNAL_ERROR)
+    match do_boot(&path, &args) {
+        Ok(()) => 0,
+        Err(err) => EXIT_STATUS_INTERNAL_ERROR,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn libos_run() -> i32 {
-    let _ = backtrace::enable_backtrace("libocclum.signed.so", PrintFormat::Short);
-    std::panic::catch_unwind(|| {
-        backtrace::__rust_begin_short_backtrace(|| match do_run() {
-            Ok(exit_status) => exit_status,
-            Err(err) => EXIT_STATUS_INTERNAL_ERROR,
-        })
-    })
-    .unwrap_or(EXIT_STATUS_INTERNAL_ERROR)
+    match do_run() {
+        Ok(exit_status) => exit_status,
+        Err(err) => EXIT_STATUS_INTERNAL_ERROR,
+    }
 }
 
 #[no_mangle]

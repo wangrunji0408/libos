@@ -2,7 +2,7 @@ use super::*;
 use core::borrow::BorrowMut;
 use core::fmt;
 use std::io::SeekFrom;
-use std::sgxfs as fs_impl;
+use sgx_tprotected_fs::{SgxFileStream, SeekFrom as SeekFrom_};
 
 pub trait File: Debug + Sync + Send + Any {
     fn read(&self, buf: &mut [u8]) -> Result<usize, Error>;
@@ -30,7 +30,7 @@ pub struct SgxFile {
 
 impl SgxFile {
     pub fn new(
-        file: Arc<Mutex<fs_impl::SgxFile>>,
+        file: Arc<Mutex<SgxFileStream>>,
         is_readable: bool,
         is_writable: bool,
         is_append: bool,
@@ -126,7 +126,7 @@ impl File for SgxFile {
 struct SgxFileInner {
     //    perms: FilePerms,
     pos: usize,
-    file: Arc<Mutex<fs_impl::SgxFile>>,
+    file: Arc<Mutex<SgxFileStream>>,
     is_readable: bool,
     is_writable: bool,
     is_append: bool,
@@ -141,14 +141,13 @@ impl SgxFileInner {
         let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
-        let seek_pos = if !self.is_append {
-            SeekFrom::Start(self.pos as u64)
+        if !self.is_append {
+            file.seek(self.pos as i64, SeekFrom_::Start)
+                .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
         } else {
-            SeekFrom::End(0)
-        };
-        // TODO: recover from error
-        file.seek(seek_pos)
-            .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
+            file.seek(0, SeekFrom_::End)
+                .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
+        }
 
         let write_len = {
             file.write(buf)
@@ -169,8 +168,7 @@ impl SgxFileInner {
         let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
-        let seek_pos = SeekFrom::Start(self.pos as u64);
-        file.seek(seek_pos)
+        file.seek(self.pos as i64, SeekFrom_::Start)
             .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
 
         let read_len = {
@@ -187,26 +185,25 @@ impl SgxFileInner {
         let file = file_guard.borrow_mut();
 
         let pos = match pos {
-            SeekFrom::Start(absolute_offset) => pos,
-            SeekFrom::End(relative_offset) => pos,
+            SeekFrom::Start(absolute_offset) => file.seek(absolute_offset as i64, SeekFrom_::Start),
+            SeekFrom::End(relative_offset) => file.seek(relative_offset, SeekFrom_::End),
             SeekFrom::Current(relative_offset) => {
-                if relative_offset >= 0 {
-                    SeekFrom::Start((self.pos + relative_offset as usize) as u64)
+                let offset = if relative_offset >= 0 {
+                    self.pos + relative_offset as usize
                 } else {
                     let backward_offset = (-relative_offset) as usize;
                     if self.pos < backward_offset {
                         // underflow
                         return errno!(EINVAL, "Invalid seek position");
                     }
-                    SeekFrom::Start((self.pos - backward_offset) as u64)
-                }
+                    self.pos - backward_offset
+                };
+                file.seek(offset as i64, SeekFrom_::Start)
             }
-        };
+        }.map_err(|_| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
 
-        self.pos = file
-            .seek(pos)
-            .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?
-            as usize;
+        self.pos = file.tell().map_err(|_| Error::new(Errno::EINVAL, "Failed to tell the file"))? as usize;
+
         Ok(self.pos as off_t)
     }
 
@@ -218,13 +215,13 @@ impl SgxFileInner {
         let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
-        let seek_pos = if !self.is_append {
-            SeekFrom::Start(self.pos as u64)
+        if !self.is_append {
+            file.seek(self.pos as i64, SeekFrom_::Start)
+                .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
         } else {
-            SeekFrom::End(0)
-        };
-        file.seek(seek_pos)
-            .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
+            file.seek(0, SeekFrom_::End)
+                .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
+        }
 
         let mut total_bytes = 0;
         for buf in bufs {
@@ -258,8 +255,7 @@ impl SgxFileInner {
         let mut file_guard = self.file.lock();
         let file = file_guard.borrow_mut();
 
-        let seek_pos = SeekFrom::Start(self.pos as u64);
-        file.seek(seek_pos)
+        file.seek(self.pos as i64, SeekFrom_::Start)
             .map_err(|e| Error::new(Errno::EINVAL, "Failed to seek to a position"))?;
 
         let mut total_bytes = 0;

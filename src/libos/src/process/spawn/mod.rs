@@ -4,7 +4,6 @@ use xmas_elf::{header, program, sections, ElfFile};
 use fs::{File, FileDesc, FileTable, INodeExt, OpenFlags, StdinFile, StdoutFile, ROOT_INODE};
 use misc::ResourceLimitsRef;
 use std::path::Path;
-use std::sgxfs::SgxFile;
 use vm::{ProcessVM};
 
 use super::task::Task;

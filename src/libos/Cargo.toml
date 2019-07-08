@@ -14,15 +14,14 @@ lazy_static = { version = "1.3.0", features = ["spin_no_std"] } # Implies nightl
 derive_builder = "0.7.2"
 rcore-fs = { path = "../../deps/sefs/rcore-fs" }
 rcore-fs-sefs = { path = "../../deps/sefs/rcore-fs-sefs" }
+xmas-elf = { path = "../../deps/xmas-elf" }
+sgx_types = "=1.0.6"
+sgx_trts = "=1.0.6"
+sgx_tprotected_fs = "=1.0.6"
+sgx_tstd = "=1.0.6"
 
 [features]
 default = ["integrity_only_opt", "sgx_file_cache"]
 syscall_timing = []     # Timing for each syscall. But it has cost from more ocall.
 integrity_only_opt = [] # Clear bss only. It should be disabled if checking memory reads.
 sgx_file_cache = []     # Cache SgxFile objects. Invalidation is unimplemented.
-
-[target.'cfg(not(target_env = "sgx"))'.dependencies]
-xmas-elf = { path = "../../deps/xmas-elf" }
-sgx_types = { path = "../../deps/rust-sgx-sdk/sgx_types" }
-sgx_tstd = { path = "../../deps/rust-sgx-sdk/sgx_tstd", features = ["backtrace"] }
-sgx_trts = { path = "../../deps/rust-sgx-sdk/sgx_trts" }

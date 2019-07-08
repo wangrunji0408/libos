@@ -1,5 +1,5 @@
 use super::*;
-use std::{slice};
+use core::slice;
 
 #[derive(Clone, Debug)]
 pub enum VMInitializer {

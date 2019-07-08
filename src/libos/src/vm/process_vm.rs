@@ -1,7 +1,7 @@
 use super::*;
 use super::vm_manager::{VMRange, VMManager, VMMapOptionsBuilder, VMMapOptions, VMMapAddr, VMInitializer};
 use super::user_space_vm::{UserSpaceVMManager, UserSpaceVMRange, USER_SPACE_VM_MANAGER};
-use std::slice;
+use core::slice;
 
 /// The per-process virtual memory
 #[derive(Debug)]

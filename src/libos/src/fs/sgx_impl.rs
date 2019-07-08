@@ -9,6 +9,8 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sgxfs::{remove, OpenOptions, SgxFile};
 use std::time::{SystemTime, UNIX_EPOCH};
+use sgx_tprotected_fs::{SgxFileStream, SeekFrom as SeekFrom_};
+use sgx_trts::c_str::CStr;
 
 pub struct SgxStorage {
     path: PathBuf,
@@ -51,13 +53,12 @@ impl Storage for SgxStorage {
     fn open(&self, file_id: usize) -> DevResult<Box<File>> {
         let locked_file = self.get(file_id, |this| {
             let mut path = this.path.to_path_buf();
-            path.push(format!("{}", file_id));
+            path.push(format!("{}\0", file_id));
             // TODO: key
             let key = [0u8; 16];
-            let file = OpenOptions::new()
-                .read(true)
-                .update(true)
-                .open_ex(path, &key)
+            let path = CStr::from_bytes_with_nul(path.to_str().unwrap().as_bytes()).unwrap();
+            let mode = CStr::from_bytes_with_nul(b"r+b\0").unwrap();
+            let file = SgxFileStream::open(path, mode, &key)
                 .expect("failed to open SgxFile");
             LockedFile(Arc::new(Mutex::new(file)))
         });
@@ -70,11 +71,10 @@ impl Storage for SgxStorage {
             path.push(format!("{}", file_id));
             // TODO: key
             let key = [0u8; 16];
-            let file = OpenOptions::new()
-                .write(true)
-                .update(true)
-                .open_ex(path, &key)
-                .expect("failed to create SgxFile");
+            let path = CStr::from_bytes_with_nul(path.to_str().unwrap().as_bytes()).unwrap();
+            let mode = CStr::from_bytes_with_nul(b"w+b\0").unwrap();
+            let file = SgxFileStream::open(path, mode, &key)
+                .expect("failed to open SgxFile");
             LockedFile(Arc::new(Mutex::new(file)))
         });
         Ok(Box::new(locked_file))
@@ -92,7 +92,7 @@ impl Storage for SgxStorage {
 }
 
 #[derive(Clone)]
-pub struct LockedFile(Arc<Mutex<SgxFile>>);
+pub struct LockedFile(Arc<Mutex<SgxFileStream>>);
 
 // `sgx_tstd::sgxfs::SgxFile` not impl Send ...
 unsafe impl Send for LockedFile {}
@@ -104,8 +104,7 @@ impl File for LockedFile {
             return Ok(0);
         }
         let mut file = self.0.lock();
-        let offset = offset as u64;
-        file.seek(SeekFrom::Start(offset))
+        file.seek(offset as i64, SeekFrom_::Start)
             .expect("failed to seek SgxFile");
         let len = file.read(buf).expect("failed to read SgxFile");
         Ok(len)
@@ -119,7 +118,8 @@ impl File for LockedFile {
 
         // SgxFile do not support seek a position after the end.
         // So check the size and padding zeros if necessary.
-        let file_size = file.seek(SeekFrom::End(0)).expect("failed to tell SgxFile") as usize;
+        file.seek(0, SeekFrom_::End).expect("failed to seek SgxFile");
+        let file_size = file.tell().expect("failed to tell SgxFile") as usize;
         if file_size < offset {
             static ZEROS: [u8; 0x1000] = [0; 0x1000];
             let mut rest_len = offset - file_size;
@@ -131,7 +131,7 @@ impl File for LockedFile {
         }
 
         let offset = offset as u64;
-        file.seek(SeekFrom::Start(offset))
+        file.seek(offset as i64, SeekFrom_::Start)
             .expect("failed to seek SgxFile");
         let len = file.write(buf).expect("failed to write SgxFile");
         Ok(len)
